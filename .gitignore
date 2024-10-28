@@ -6,3 +6,7 @@ tmp/*
 !tmp/.gitkeep
 logs/*
 !logs/.gitkeep
+.env
+.env
+.env
+.envBACKUP

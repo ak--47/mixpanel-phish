@@ -12,15 +12,22 @@
     "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "type": "module",
-  "keywords": ["cloud function", "template", "serverless"],
+  "keywords": [
+    "cloud function",
+    "template",
+    "serverless"
+  ],
   "author": "ak@mixpanel.com",
   "license": "ISC",
   "description": "AK's cloud function boilerplate",
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.2",
     "@google-cloud/storage": "^7.12.0",
+    "ak-fetch": "^1.0.6",
     "ak-tools": "^1.0.64",
-    "dotenv": "^16.4.5"
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "mixpanel-import": "^2.6.4"
   },
   "devDependencies": {
     "jest": "^29.7.0",
