@@ -1,0 +1,41 @@
+tmp
+deploy.sh
+start.sh
+fire.sh
+sample-event.json
+scratch.js
+.vscode
+
+
+
+# Ignore node_modules (generated during npm install)
+node_modules
+# Ignore local environment configuration
+.env
+# Ignore specific directories
+data
+tmp
+# Ignore deployment scripts
+deploy.sh
+fire.sh
+local.sh
+# Ignore local test files
+sample-event.json
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+# Ignore logs
+*.log
+# Ignore backup files
+*.bak
+# Ignore lock files
+package-lock.json
+yarn.lock
+# Ignore build files
+dist
+build
+# Ignore editor-specific files
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
