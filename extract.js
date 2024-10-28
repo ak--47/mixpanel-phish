@@ -25,10 +25,13 @@ export async function getShows() {
 		let cachedShows = null;
 		try {
 			cachedShows = await u.load(`${TEMP_DIR}/shows.json`, true);
+			if (NODE_ENV === 'dev') console.log("Loaded cached shows");
 			return cachedShows;
 		} catch (e) {
 			if (NODE_ENV === 'dev') debugger;
 		}
+
+		if (NODE_ENV === 'dev') console.log("Fetching shows from phish.net");
 
 		/** @type {fetch.BatchRequestConfig} */
 		const getShowOptions = {
@@ -41,6 +44,7 @@ export async function getShows() {
 		const shows = await fetch(getShowOptions);
 		if (!shows?.data) throw new Error("No data returned from phish.net");
 		cachedShows = await u.touch(`${TEMP_DIR}/shows.json`, shows.data, true);
+		if (NODE_ENV === 'dev') console.log("wrote shows to cache");
 		return cachedShows;
 	}
 	catch (e) {
@@ -55,11 +59,13 @@ export async function getSetlists() {
 		let cachedSetlists = null;
 		try {
 			cachedSetlists = await u.load(`${TEMP_DIR}/setlists.json`, true);
+			if (NODE_ENV === 'dev') console.log("Loaded cached setlists");
 			return cachedSetlists;
 		}
 		catch (e) {
 			if (NODE_ENV === 'dev') debugger;
 		}
+		if (NODE_ENV === 'dev') console.log("Fetching setlists from phish.net");
 		const shows = await getShows();
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showDates = pastShows.map(s => s.showdate);
@@ -68,7 +74,7 @@ export async function getSetlists() {
 		const getSetlistsOptions = {
 			concurrency: 10,
 			delay: 1000,
-			verbose: true,
+			verbose: false,
 			method: 'GET',
 			url: 'https://api.phish.net/v5/setlists/showdate/',
 			searchParams: { apikey: API_KEY },
@@ -87,6 +93,7 @@ export async function getSetlists() {
 		const setlists = await fetch(getSetlistRequests);
 		const setlistData = setlists.map(s => s.data);
 		cachedSetlists = await u.touch(`${TEMP_DIR}/setlists.json`, setlistData, true);
+		if (NODE_ENV === 'dev') console.log("wrote setlists to cache");
 		return cachedSetlists;
 	}
 	catch (e) {

@@ -16,7 +16,7 @@ import { songsToGroupProfiles } from "./transform.js";
 import mp from 'mixpanel-import';
 
 export async function loadToMixpanel() {
-	try {
+	try {		
 		const profiles = await songsToGroupProfiles();
 
 		/** @type {mp.Creds} */
@@ -29,11 +29,12 @@ export async function loadToMixpanel() {
 		const importImportOptions = {
 			recordType: "group",
 			groupKey: "$song_id",
-			verbose: true,
+			verbose: false,
 			fixData: true,
 		};
-
+		if (NODE_ENV === 'dev') importImportOptions.verbose = true;
 		const importResults = await mp(importCreds, profiles, importImportOptions);
+		if (NODE_ENV === 'dev') console.log('wrote import results to cache');
 		const importLog = await u.touch(`${TEMP_DIR}/import-log.json`, importResults, true);
 		return importLog;
 	}
