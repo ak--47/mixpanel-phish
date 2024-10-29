@@ -27,13 +27,30 @@ export async function songsToGroupProfiles() {
 				DATE: s.showdate,
 				SONG: s.song,
 				VENUE: s.venue,
+				SHOW_GAP: s.gap,
+				REVIEWS: s.reviews,
+
+
 
 				// ! lookup props
 				songid: s.songid,
 				tourid: s.tourid,
-
-
 			};
+
+			let TRANSITION = '';
+			switch (s.trans_mark.trim()) {
+				case ',':
+					TRANSITION = 'pause';
+				case '>':
+					TRANSITION = 'segue';
+				case '->':				
+					TRANSITION = 'jam';
+				case '':
+					TRANSITION = 'closer'
+					
+			}
+
+			profile.TRANSITION = TRANSITION;
 
 			return profile;
 		});
