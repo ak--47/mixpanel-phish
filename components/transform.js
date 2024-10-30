@@ -41,12 +41,16 @@ export async function songsToGroupProfiles() {
 			switch (s.trans_mark.trim()) {
 				case ',':
 					TRANSITION = 'pause';
+					break;
 				case '>':
 					TRANSITION = 'segue';
+					break;
 				case '->':				
 					TRANSITION = 'jam';
+					break;
 				case '':
 					TRANSITION = 'closer'
+					break;
 					
 			}
 
