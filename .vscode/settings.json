@@ -3,11 +3,14 @@
 	"js/ts.implicitProjectConfig.checkJs": false,
 	"jest.jestCommandLine": "npm run test --",
 	"cSpell.words": [
+		"Phan",
 		"setlist",
 		"Setlists",
 		"showdate",
+		"showid",
 		"songid",
 		"tourid",
+		"venueid",
 		"waystation"
 	]
 }
