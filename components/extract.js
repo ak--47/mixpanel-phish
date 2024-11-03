@@ -335,6 +335,40 @@ export async function getJamNotes() {
 	}
 }
 
+
+export async function getUsers() {
+	try {
+		let cachedUsers = null;
+		try {
+			cachedUsers = await u.load(`${TEMP_DIR}/users.json`, true);
+			if (NODE_ENV === 'dev') console.log("Loaded cached users");
+			return cachedUsers;
+		} catch (e) {
+			if (NODE_ENV === 'dev') debugger;
+		}
+
+		if (NODE_ENV === 'dev') console.log("Fetching users from phish.net");
+
+		/** @type {fetch.BatchRequestConfig} */
+		const getUserOptions = {
+			method: 'GET',
+			url: 'https://api.phish.net/v5/users/uid/0.json',
+			searchParams: { apikey: API_KEY },
+			headers: { 'User-Agent': 'mixpanel-phish' }
+		};
+
+		const users = await fetch(getUserOptions);
+		if (!users?.data) throw new Error("No data returned from phish.net");
+		cachedUsers = await u.touch(`${TEMP_DIR}/users.json`, users.data, true);
+		if (NODE_ENV === 'dev') console.log("wrote users to cache");
+		return cachedUsers;
+	}
+	catch (e) {
+		if (NODE_ENV === 'dev') debugger;
+		throw e;
+	}
+}
+
 export async function getPerformanceMeta() {
 	try {
 		let cachedPerfMeta = null;
@@ -385,6 +419,7 @@ export async function getPerformanceMeta() {
 
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+	const u = await getUsers();
 	const perfMeta = await getPerformanceMeta();
 	const j = await getJamNotes();
 	const song = await getSongs();

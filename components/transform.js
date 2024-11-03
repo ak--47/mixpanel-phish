@@ -3,26 +3,44 @@ dotenv.config();
 const { NODE_ENV = "" } = process.env;
 if (!NODE_ENV) throw new Error("NODE_ENV is required");
 import u from 'ak-tools';
-import { getPerformances } from './extract.js';
+import {
+	getPerformances,
+	getAttendance,
+	getJamNotes,
+	getPerformanceMeta,
+	getReviews,
+	getShows,
+	getSongs,
+	getVenues
+} from './extract.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 
-export async function songsToGroupProfiles() {
+export async function phanProfiles() {
+}
+
+export async function attendanceEvents() { }
+
+export async function reviewEvents() { }
+
+export async function songProfiles() { }
+
+export async function performanceProfiles() {
 	try {
 		const songs = await getPerformances();
 		const profiles = songs.map(s => {
 			// ! the songId is a unique identifier for each song
 			const distinct_id = u.md5(`${s.showdate}-${s.slug}-${s.set}-${s.position}`);
-			
+
 			// ! these are special fields for mixpanel display
 			const topName = `${s.song} (${s.showdate})`;
 			const bottomName = `${s.venue} - ${s.city}, ${s.state}`;
-			
+
 			// ! the eras / epoch of phish
 			// ? https://www.reddit.com/r/phish/comments/wp9gde/comment/ikfhqrm/
 			let ERA = '';
-			const parsedDate = dayjs.utc(s.showdate);			
+			const parsedDate = dayjs.utc(s.showdate);
 			if (parsedDate.isBefore('2000-10-07')) ERA = "1.0";
 			else if (parsedDate.isBefore('2004-08-15')) ERA = "2.0";
 			else if (parsedDate.isBefore('2020-02-23')) ERA = "3.0";
@@ -38,17 +56,17 @@ export async function songsToGroupProfiles() {
 				case '>':
 					TRANSITION = 'segue';
 					break;
-				case '->':				
+				case '->':
 					TRANSITION = 'jam';
 					break;
 				case '':
-					TRANSITION = 'closer'
+					TRANSITION = 'closer';
 					break;
-					
+
 			}
-			
+
 			const profile = {
-				
+
 				//! ID Props
 				distinct_id,
 				$name: topName,
@@ -72,10 +90,10 @@ export async function songsToGroupProfiles() {
 				// ! computed props
 				TRANSITION,
 				ERA,
-		
+
 			};
 
-			
+
 
 			profile.TRANSITION = TRANSITION;
 
@@ -91,9 +109,11 @@ export async function songsToGroupProfiles() {
 	}
 }
 
+export async function performanceEvents() { }
+
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-	const p = await songsToGroupProfiles();
-	const uniq = Array.from(new Set(p.map(a => a.ERA)))
+	const p = await performanceProfiles();
+	const uniq = Array.from(new Set(p.map(a => a.ERA)));
 	if (NODE_ENV === 'dev') debugger;
 }
