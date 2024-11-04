@@ -16,23 +16,32 @@ import u from 'ak-tools';
 import fetch from "ak-fetch";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import { existsSync } from "fs";
+import { createWriteStream, createReadStream } from 'fs';
+import readline from 'readline';
 dayjs.extend(utc);
 
 
 /** Utility function for caching */
 async function getCachedData(filename, fetchData, sliceLimit = 10000) {
 	try {
-		let cachedData = await u.load(`${TEMP_DIR}/${filename}`, true);
-		if (NODE_ENV === 'dev') console.log(`Loaded cached ${filename}`);
-		if (NODE_ENV === 'dev') cachedData = cachedData.slice(0, sliceLimit);
-		return cachedData;
-	} catch (e) {
+		let cachedData;
+		if (existsSync(`${TEMP_DIR}/${filename}`)) {
+			if (NODE_ENV === 'dev') console.log(`Loading cached ${filename}`);
+			cachedData = await load(filename, true);
+			if (NODE_ENV === 'dev') cachedData = cachedData.slice(0, sliceLimit);
+			return cachedData;
+		}
+
+		else {
+			const data = await fetchData();
+			await touch(filename, data, true);
+			if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
+			return data;
+		}
+	}
+	catch (e) {
 		if (NODE_ENV === 'dev') debugger;
-		// Proceed to fetch data if cache loading fails
-		const data = await fetchData();
-		cachedData = await u.touch(`${TEMP_DIR}/${filename}`, data, true);
-		if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
-		return cachedData;
 	}
 }
 
@@ -112,6 +121,7 @@ export async function getAttendance() {
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showIds = pastShows.map(s => s.showid);
 
+		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getAttendanceOptions = {
 			concurrency: 25,
 			delay: 1000,
@@ -123,13 +133,16 @@ export async function getAttendance() {
 			noBatch: true,
 			errorHandler: (e) => {
 				if (NODE_ENV === 'dev') debugger;
+			},
+			responseHandler: (r) => {
+				return r.data;
 			}
 		};
 
 		const getAttendanceRequests = showIds.map(id => ({
 			...getAttendanceOptions,
 			url: `${getAttendanceOptions.url}${id}.json`
-		}));
+		}))
 
 		const attendanceData = await fetch(getAttendanceRequests);
 		return attendanceData.flat();
@@ -224,17 +237,17 @@ export async function getUsers() {
 }
 
 /** Fetching Performance Metadata */
-export async function getPerformanceMeta() {
-	return getCachedData('performance-metadata.json', async () => {
-		if (NODE_ENV === 'dev') console.log("Fetching performance metadata from phish.in");
+export async function getMetaData() {
+	return getCachedData('metadata.json', async () => {
+		if (NODE_ENV === 'dev') console.log("Fetching metadata from phish.in");
 
 		const shows = await getShows();
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showDates = pastShows.map(s => s.showdate);
 
 		const getPerformanceMetaOptions = {
-			concurrency: 10,
-			delay: 2500,
+			concurrency: 25,
+			delay: 1500,
 			verbose: false,
 			method: 'GET',
 			url: 'https://phish.in/api/v2/shows/',
@@ -256,11 +269,41 @@ export async function getPerformanceMeta() {
 	});
 }
 
+async function touch(filename, data, append = false) {
+    const filePath = `${TEMP_DIR}/${filename}`;
+    const writeStream = createWriteStream(filePath, { flags: append ? 'a' : 'w' });
 
+    for (const item of data) {
+        writeStream.write(JSON.stringify(item) + '\n');
+    }
+
+    writeStream.end();
+    return new Promise((resolve, reject) => {
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+    });
+}
+
+
+async function load(filename) {
+    const filePath = `${TEMP_DIR}/${filename}`;
+    const readStream = createReadStream(filePath);
+    const rl = readline.createInterface({
+        input: readStream,
+        crlfDelay: Infinity
+    });
+
+    const data = [];
+    for await (const line of rl) {
+        data.push(JSON.parse(line));
+    }
+
+    return data;
+}
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	const u = await getUsers();
-	const perfMeta = await getPerformanceMeta();
+	const perfMeta = await getMetaData();
 	const j = await getJamNotes();
 	const song = await getSongs();
 	const r = await getReviews();

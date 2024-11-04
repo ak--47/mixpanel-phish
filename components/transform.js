@@ -7,7 +7,7 @@ import {
 	getPerformances,
 	getAttendance,
 	getJamNotes,
-	getPerformanceMeta,
+	getMetaData,
 	getReviews,
 	getShows,
 	getSongs,
@@ -29,7 +29,7 @@ export async function attendanceEvents() {
 	const performances = await getPerformances();
 	const songBank = await getSongs();
 	const venues = await getVenues();
-	const meta = await getPerformanceMeta();
+	const meta = await getMetaData();
 	const events = [];
 
 	attendance.forEach(u => {
@@ -98,7 +98,7 @@ export async function reviewEvents() {
 	const reviews = await getReviews();
 	const shows = await getShows();
 	const venues = await getVenues();
-	const meta = await getPerformanceMeta();
+	const meta = await getMetaData();
 
 	const events = [];
 
