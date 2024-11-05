@@ -12,49 +12,85 @@ if (NODE_ENV === 'dev') TEMP_DIR = './tmp';
 else TEMP_DIR = tmpdir();
 TEMP_DIR = path.resolve(TEMP_DIR);
 
-import u from 'ak-tools';
 import fetch from "ak-fetch";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { existsSync } from "fs";
-import { createWriteStream, createReadStream } from 'fs';
-import readline from 'readline';
+import { load, touch } from './crud.js';
 dayjs.extend(utc);
 
+const CONCURRENCY = 30;
+const DELAY = 1000;
+let VERBOSE = false;
+if (NODE_ENV === 'dev') VERBOSE = true;
 
 /** Utility function for caching */
-async function getCachedData(filename, fetchData, sliceLimit = 10000) {
-	try {
-		let cachedData;
-		if (existsSync(`${TEMP_DIR}/${filename}`)) {
-			if (NODE_ENV === 'dev') console.log(`Loading cached ${filename}`);
-			cachedData = await load(filename, true);
-			if (NODE_ENV === 'dev') cachedData = cachedData.slice(0, sliceLimit);
+async function getCachedData(filename, fetchData) {
+
+	let cachedData;
+	if (existsSync(`${TEMP_DIR}/${filename}`)) {
+		if (NODE_ENV === 'dev') console.log(`Loading cached ${filename}`);
+		try {
+			cachedData = await load(filename);
 			return cachedData;
 		}
-
-		else {
-			const data = await fetchData();
-			await touch(filename, data, true);
-			if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
-			return data;
+		catch (e) {
+			if (NODE_ENV === 'dev') debugger;
 		}
 	}
-	catch (e) {
-		if (NODE_ENV === 'dev') debugger;
+
+	else {
+		const data = await fetchData();
+		try {
+			await touch(filename, data);
+		}
+		catch (e) {
+			if (NODE_ENV === 'dev') debugger;
+		}
+		if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
+		return data;
 	}
 }
+
+/** Fetching Users */
+export async function getUsers() {
+	return getCachedData('users.json', async () => {
+		if (NODE_ENV === 'dev') console.log("Fetching users from phish.net");
+
+		/** @type {import('ak-fetch').BatchRequestConfig} */
+		const getUserOptions = {
+			method: 'GET',
+			verbose: VERBOSE,
+			url: 'https://api.phish.net/v5/users/uid/0.json',
+			searchParams: { apikey: API_KEY },
+			headers: { 'User-Agent': 'mixpanel-phish' },
+			errorHandler: (e) => {
+				if (NODE_ENV === 'dev') debugger;
+				return [];
+			}
+		};
+
+
+
+		const users = await fetch(getUserOptions);
+		if (!users?.data) throw new Error("No data returned from phish.net");
+		return users.data;
+	});
+}
+
 
 /** Fetching Shows */
 export async function getShows() {
 	return getCachedData('shows.json', async () => {
 		if (NODE_ENV === 'dev') console.log("Fetching shows from phish.net");
 
+		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getShowOptions = {
 			method: 'GET',
 			url: 'https://api.phish.net/v5/shows/artist/phish.json',
 			searchParams: { apikey: API_KEY, order_by: 'showdate', direction: 'desc' },
-			headers: { 'User-Agent': 'mixpanel-phish' }
+			headers: { 'User-Agent': 'mixpanel-phish' },
+			verbose: VERBOSE
 		};
 
 		const shows = await fetch(getShowOptions);
@@ -71,10 +107,11 @@ export async function getPerformances() {
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showDates = pastShows.map(s => s.showdate);
 
+		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getPerformancesOptions = {
-			concurrency: 10,
-			delay: 1000,
-			verbose: false,
+			concurrency: CONCURRENCY,
+			delay: DELAY,
+			verbose: VERBOSE,
 			method: 'GET',
 			url: 'https://api.phish.net/v5/setlists/showdate/',
 			searchParams: { apikey: API_KEY },
@@ -104,7 +141,8 @@ export async function getVenues() {
 			method: 'GET',
 			url: 'https://api.phish.net/v5/venues',
 			searchParams: { apikey: API_KEY },
-			headers: { 'User-Agent': 'mixpanel-phish' }
+			headers: { 'User-Agent': 'mixpanel-phish' },
+			verbose: VERBOSE
 		};
 
 		const venues = await fetch(getVenueOptions);
@@ -123,9 +161,9 @@ export async function getAttendance() {
 
 		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getAttendanceOptions = {
-			concurrency: 25,
-			delay: 1000,
-			verbose: false,
+			concurrency: CONCURRENCY,
+			delay: DELAY,
+			verbose: VERBOSE,
 			method: 'GET',
 			url: 'https://api.phish.net/v5/attendance/showid/',
 			searchParams: { apikey: API_KEY },
@@ -142,7 +180,7 @@ export async function getAttendance() {
 		const getAttendanceRequests = showIds.map(id => ({
 			...getAttendanceOptions,
 			url: `${getAttendanceOptions.url}${id}.json`
-		}))
+		}));
 
 		const attendanceData = await fetch(getAttendanceRequests);
 		return attendanceData.flat();
@@ -158,10 +196,11 @@ export async function getReviews() {
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showIds = pastShows.map(s => s.showid);
 
+		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getReviewOptions = {
-			concurrency: 25,
-			delay: 1000,
-			verbose: false,
+			concurrency: CONCURRENCY,
+			delay: DELAY,
+			verbose: VERBOSE,
 			method: 'GET',
 			url: 'https://api.phish.net/v5/reviews/showid/',
 			searchParams: { apikey: API_KEY },
@@ -189,6 +228,7 @@ export async function getSongs() {
 
 		const getSongOptions = {
 			method: 'GET',
+			verbose: VERBOSE,
 			url: 'https://api.phish.net/v5/songs/',
 			searchParams: { apikey: API_KEY },
 			headers: { 'User-Agent': 'mixpanel-phish' }
@@ -202,11 +242,12 @@ export async function getSongs() {
 
 /** Fetching Jam Notes */
 export async function getJamNotes() {
-	return getCachedData('jam-notes.json', async () => {
+	return getCachedData('notes.json', async () => {
 		if (NODE_ENV === 'dev') console.log("Fetching jam notes from phish.net");
 
 		const getJamNoteOptions = {
 			method: 'GET',
+			verbose: VERBOSE,
 			url: 'https://api.phish.net/v5/jamcharts/',
 			searchParams: { apikey: API_KEY },
 			headers: { 'User-Agent': 'mixpanel-phish' }
@@ -218,23 +259,6 @@ export async function getJamNotes() {
 	});
 }
 
-/** Fetching Users */
-export async function getUsers() {
-	return getCachedData('users.json', async () => {
-		if (NODE_ENV === 'dev') console.log("Fetching users from phish.net");
-
-		const getUserOptions = {
-			method: 'GET',
-			url: 'https://api.phish.net/v5/users/uid/0.json',
-			searchParams: { apikey: API_KEY },
-			headers: { 'User-Agent': 'mixpanel-phish' }
-		};
-
-		const users = await fetch(getUserOptions);
-		if (!users?.data) throw new Error("No data returned from phish.net");
-		return users.data;
-	});
-}
 
 /** Fetching Performance Metadata */
 export async function getMetaData() {
@@ -245,10 +269,11 @@ export async function getMetaData() {
 		const pastShows = shows.filter(s => dayjs(s.showdate).isBefore(dayjs()));
 		const showDates = pastShows.map(s => s.showdate);
 
+		/** @type {import('ak-fetch').BatchRequestConfig} */
 		const getPerformanceMetaOptions = {
-			concurrency: 25,
-			delay: 1500,
-			verbose: false,
+			concurrency: CONCURRENCY,
+			delay: DELAY,
+			verbose: VERBOSE,
 			method: 'GET',
 			url: 'https://phish.in/api/v2/shows/',
 			headers: { 'User-Agent': 'mixpanel-phish' },
@@ -256,7 +281,11 @@ export async function getMetaData() {
 			errorHandler: (e) => {
 				if (e.status === 404) return {};
 				if (NODE_ENV === 'dev') debugger;
+			},
+			responseHandler: (r) => {
+				return r;
 			}
+
 		};
 
 		const getPerformanceMetaRequests = showDates.map(date => ({
@@ -269,47 +298,20 @@ export async function getMetaData() {
 	});
 }
 
-async function touch(filename, data, append = false) {
-    const filePath = `${TEMP_DIR}/${filename}`;
-    const writeStream = createWriteStream(filePath, { flags: append ? 'a' : 'w' });
 
-    for (const item of data) {
-        writeStream.write(JSON.stringify(item) + '\n');
-    }
-
-    writeStream.end();
-    return new Promise((resolve, reject) => {
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-    });
-}
-
-
-async function load(filename) {
-    const filePath = `${TEMP_DIR}/${filename}`;
-    const readStream = createReadStream(filePath);
-    const rl = readline.createInterface({
-        input: readStream,
-        crlfDelay: Infinity
-    });
-
-    const data = [];
-    for await (const line of rl) {
-        data.push(JSON.parse(line));
-    }
-
-    return data;
-}
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	const u = await getUsers();
-	const perfMeta = await getMetaData();
+	const s = await getShows();
 	const j = await getJamNotes();
+	const v = await getVenues();
 	const song = await getSongs();
+	const st = await getPerformances();
+	const perfMeta = await getMetaData();
 	const r = await getReviews();
 	const a = await getAttendance();
-	const v = await getVenues();
-	const s = await getShows();
-	const st = await getPerformances();
+
+
+
 	if (NODE_ENV === 'dev') debugger;
 }
