@@ -173,7 +173,18 @@ export async function getAttendance() {
 				if (NODE_ENV === 'dev') debugger;
 			},
 			responseHandler: (r) => {
-				return r.data;
+				return r.data.map(u => {
+					const { uid, username, showid, showdate, tour_name, venue, venueid } = u;
+					return {
+						uid,
+						username,
+						showid,
+						showdate,
+						tour_name,
+						venue,
+						venueid
+					};
+				});
 			}
 		};
 

@@ -2,6 +2,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 const { NODE_ENV = "" } = process.env;
 if (!NODE_ENV) throw new Error("NODE_ENV is required");
+import path from 'path';
+let TEMP_DIR;
+if (NODE_ENV === 'dev') TEMP_DIR = './tmp';
+else TEMP_DIR = tmpdir();
+TEMP_DIR = path.resolve(TEMP_DIR);
+
 import u from 'ak-tools';
 import {
 	getPerformances,
@@ -16,18 +22,40 @@ import {
 } from './extract.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import { touch } from "./crud.js";
+const { default: ScaleArray } = await import('scale-array');
 dayjs.extend(utc);
 
 
-const attendance = await getAttendance();
-const shows = await getShows();
-const performances = await getPerformances();
-const songBank = await getSongs();
-const venues = await getVenues();
-const meta = await getMetaData();
-const reviews = await getReviews();
-const users = await getUsers();
-const jamNotes = await getJamNotes();
+let attendance, shows, performances, songBank, venues, meta, reviews, users, jamNotes;
+let LOADED = false;
+
+export async function loadData() {
+	[attendance, shows, performances, songBank, venues, meta, reviews, users, jamNotes] =
+		await Promise.all([
+			getAttendance(),
+			getShows(),
+			getPerformances(),
+			getSongs(),
+			getVenues(),
+			getMetaData(),
+			getReviews(),
+			getUsers(),
+			getJamNotes()
+		]);
+	LOADED = true;
+	return {
+		attendance,
+		shows,
+		performances,
+		songBank,
+		venues,
+		meta,
+		reviews,
+		users,
+		jamNotes
+	};
+}
 
 
 
@@ -36,63 +64,61 @@ const jamNotes = await getJamNotes();
  * EVENTS
  */
 
-export async function attendanceEvents() {
+/**
+ * depends on users
+ * @param  {} user
+ */
+export function attendanceEvents(user) {
+	if (!LOADED) throw new Error("Data not loaded");
 	const events = [];
+	const distinct_id = user.uid;
+	const username = user.username;
+	const show = shows.find(s => s.showid === user.showid) || {};
+	const venue = venues.find(v => v.venueid === show.venueid) || {};
+	const songsHeard = performances.filter(p => p.showid === user.showid);
+	const time = dayjs.utc(show.showdate).toISOString();
+	const metaData = meta.find(m => dayjs.utc(m?.date).toISOString() === time) || {};
 
-	attendance.forEach(u => {
+	const attendanceEvent = {
+		event: "attended show",
+		distinct_id,
+		username,
+		time,
+
+		//group analytics
+		show_id: show.showid,
+		venue_id: venue.venueid,
+
+		$latitude: metaData?.venue?.latitude,
+		$longitude: metaData?.venue?.longitude,
+		duration_mins: mins(metaData?.duration),
+	};
+
+	events.push(attendanceEvent);
+
+	songsHeard.forEach((s, index) => {
 		try {
-			const distinct_id = u.uid;
-			const username = u.username;
-			const show = shows.find(s => s.showid === u.showid) || {};
-			const venue = venues.find(v => v.venueid === show.venueid) || {};
-			const songsHeard = performances.filter(p => p.showid === u.showid);
-			const time = dayjs.utc(show.showdate).toISOString();
-			const metaData = meta.find(m => dayjs.utc(m?.date).toISOString() === time) || {};
-
-			const attendanceEvent = {
-				event: "attended show",
+			const song = songBank.find(sb => sb.songid === s.songid) || {};
+			const songMeta = metaData?.tracks?.find(m => m?.slug === song?.slug) || {};
+			const newTime = dayjs(time).add((index + 1) * 4.20, 'minute').toISOString(); // lulz
+			const songEvent = {
+				event: "heard song",
 				distinct_id,
 				username,
-				time,
+				time: newTime,
+				$latitude: metaData?.venue?.latitude,
+				$longitude: metaData?.venue?.longitude,
+				song_id: s?.songid,
+				venue_id: venue?.venueid,
+				show_id: show?.showid,
+				performance_id: `${show.showid}-${s.set}-${s.position}-${s.songid}`,
+				song_name: song?.song,
+				duration_mins: mins(songMeta?.duration),
+				url: songMeta?.mp3_url,
 
-				//group analytics
-				show_id: show.showid,
-				venue_id: venue.venueid,
-
-				latitude: metaData?.venue?.latitude,
-				longitude: metaData?.venue?.longitude,
-				duration_mins: mins(metaData?.duration),
 			};
-
-			events.push(attendanceEvent);
-
-			songsHeard.forEach(s => {
-				try {
-					const song = songBank.find(sb => sb.songid === s.songid) || {};
-					const songMeta = metaData?.tracks?.find(m => m?.slug === song?.slug) || {};
-					const songEvent = {
-						event: "heard song",
-						distinct_id,
-						username,
-						time,
-
-						song_id: s?.songid,
-						venue_id: venue?.venueid,
-						show_id: show?.showid,
-						performance_id: `${show.showid}-${s.set}-${s.position}-${s.songid}`,
-						song_name: song?.song,
-						duration_mins: mins(songMeta?.duration),
-						url: songMeta?.mp3_url,
-
-					};
-					events.push(songEvent);
-				}
-				catch (e) {
-					if (NODE_ENV === 'dev') debugger;
-				}
-			});
+			events.push(songEvent);
 		}
-
 		catch (e) {
 			if (NODE_ENV === 'dev') debugger;
 		}
@@ -101,232 +127,235 @@ export async function attendanceEvents() {
 	return events;
 }
 
-export async function reviewEvents() {
+/**
+ * depends on reviews
+ * @param  {} review
+ */
+export function reviewEvents(reviewsPayload) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const data = reviewsPayload.data;
+	if (data.length === 0) return {};
+	const events = data.map(review => {
+		const date = review.showdate;
+		const time = dayjs.utc(date).toISOString();
+		const distinct_id = review.uid;
+		const username = review.username;
+		const show = shows.find(s => s.showid === review.showid) || {};
+		const metaData = meta.find(m => m.date === date) || {};
+		const reviewEvent = {
+			event: "reviewed show",
+			distinct_id,
+			username,
+			time,
+			duration_mins: mins(metaData?.duration),
+			show_id: review.showid,
+			venue_id: show.venueid,
+			review_id: review.reviewid,
+			rating: review.score,
+			review: review.review_text,
+			$latitude: metaData?.venue?.latitude,
+			$longitude: metaData?.venue?.longitude,
 
-	const events = [];
-
-	reviews.forEach(r => {
-		try {
-			const time = dayjs.utc(r.date).toISOString();
-			const distinct_id = r.uid;
-			const username = r.username;
-			const show = shows.find(s => s.showid === r.showid) || {};
-			const metaData = meta.find(m => dayjs.utc(m?.date).toISOString() === time) || {};
-			const reviewEvent = {
-				event: "reviewed show",
-				distinct_id,
-				username,
-				time,
-				duration_mins: mins(metaData?.duration),
-				show_id: r.showid,
-				venue_id: show.venueid,
-				review_id: r.review_id,
-				rating: r.score,
-				review: r.text,
-				latitude: metaData?.venue?.latitude,
-				longitude: metaData?.venue?.longitude,
-
-			};
-			events.push(reviewEvent);
-		}
-		catch (e) {
-			if (NODE_ENV === 'dev') debugger;
-		}
+		};
+		return reviewEvent;
 	});
 	return events;
+
 }
 
-export async function performanceEvents() {
-
-	const events = [];
-
-	performances.forEach(p => {
-		try {
-			const time = dayjs.utc(p.showdate).toISOString();
-			const song = songBank.find(s => s.songid === p.songid) || {};
-			const metaData = meta.find(m => dayjs.utc(m?.date).toISOString() === time) || {};
-			const trackMeta = metaData?.tracks?.find(m => m?.slug === song?.slug) || {};
-			const performanceEvent = {
-				event: "song played",
-				time,
-				show_id: p.showid,
-				venue_id: p.venueid,
-				song_id: p.songid,
-				performance_id: `${p.showid}-${p.set}-${p.position}-${p.songid}`,
-				song_name: song.song,
-				duration_mins: mins(trackMeta?.duration),
-				url: trackMeta?.mp3_url,
-			};
-			events.push(performanceEvent);
-		}
-		catch (e) {
-			if (NODE_ENV === 'dev') debugger;
-		}
-	});
-
-	return events;
-
-
+/**
+ * depends on performances
+ * @param  {} perf
+ */
+export function performanceEvents(perf) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const time = dayjs.utc(perf.showdate).toISOString();
+	const song = songBank.find(s => s.songid === perf.songid) || {};
+	const metaData = meta.find(m => dayjs.utc(m?.date).toISOString() === time) || {};
+	const trackMeta = metaData?.tracks?.find(m => m?.slug === song?.slug) || {};
+	const performanceEvent = {
+		event: "song played",
+		time,
+		show_id: perf.showid,
+		venue_id: perf.venueid,
+		song_id: perf.songid,
+		performance_id: `${perf.showid}-${perf.set}-${perf.position}-${perf.songid}`,
+		song_name: song.song,
+		duration_mins: mins(trackMeta?.duration),
+		url: trackMeta?.mp3_url,
+	};
+	return performanceEvent;
 }
 
 /**
  * PROFILES
  */
 
-export async function phanProfiles() {
-	const modeledUsers = users.map(u => {
-		try {
-			const distinct_id = u.uid;
-			const email = u.username;
-			const created = dayjs.utc(u.date_joined).toISOString();
-			return {
-				distinct_id,
-				email,
-				created,
-				...u
-			};
-		}
-		catch (e) {
-			if (NODE_ENV === 'dev') debugger;
-			return {};
-		}
-	});
-	return modeledUsers;
 
+/**
+ * depends on users
+ */
+export function phanProfiles(user) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const distinct_id = user.uid;
+	const name = user.username;
+	const email = `since ${dayjs(user.date_joined).format('YYYY')}`;
+	const created = dayjs.utc(user.date_joined).toISOString();
+	return {
+		name,
+		distinct_id,
+		email,
+		created,
+		...user
+	};
 }
 
-export async function performanceProfiles() {
-	try {
-		const profiles = performances.map(s => {
-			const metaData = meta.find(m => m.date === s.showdate) || {};
-			const trackMeta = metaData?.tracks?.find(m => m.slug === s.slug) || {};
-			const jamNote = jamNotes.find(j => j.showid === s.showid) || {};
-			const avatar = meta?.album_cover_url;
+/**
+ * depends on performances
+ * @param  {} perf
+ */
+export function performanceProfiles(perf) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const metaData = meta.find(m => m.date === perf.showdate) || {};
+	const trackMeta = metaData?.tracks?.find(m => m.slug === perf.slug) || {};
+	const jamNote = jamNotes.find(j => j.showid === perf.showid) || {};
+	const avatar = metaData?.album_cover_url;
 
-			if (Object.keys(jamNote) >= 1) debugger;
+	if (Object.keys(jamNote) >= 1) debugger;
 
-			const distinct_id = `${s.showid}-${s.set}-${s.position}-${s.songid}`;
-			const topName = `${s.song} (${s.showdate})`;
-			const bottomName = `${s.venue} - ${s.city}, ${s.state}`;
+	const distinct_id = `${perf.showid}-${perf.set}-${perf.position}-${perf.songid}`;
+	const topName = `${perf.song} (${perf.showdate})`;
+	const bottomName = `${perf.venue} - ${perf.city}, ${perf.state}`;
 
-			// ! the eras / epoch of phish
-			// ? https://www.reddit.com/r/phish/comments/wp9gde/comment/ikfhqrm/
-			let era = '';
-			const parsedDate = dayjs.utc(s.showdate);
-			if (parsedDate.isBefore('2000-10-07')) era = "1.0";
-			else if (parsedDate.isBefore('2004-08-15')) era = "2.0";
-			else if (parsedDate.isBefore('2020-02-23')) era = "3.0";
-			else if (parsedDate.isAfter('2020-02-23')) era = "4.0";
-			else era = "unknown";
+	// ! the eras / epoch of phish
+	// ? https://www.reddit.com/r/phish/comments/wp9gde/comment/ikfhqrm/
+	let era = '';
+	const parsedDate = dayjs.utc(perf.showdate);
+	if (parsedDate.isBefore('2000-10-07')) era = "1.0";
+	else if (parsedDate.isBefore('2004-08-15')) era = "2.0";
+	else if (parsedDate.isBefore('2020-02-23')) era = "3.0";
+	else if (parsedDate.isAfter('2020-02-23')) era = "4.0";
+	else era = "unknown";
 
-			// ! interpret the transition mark
-			let transition = '';
-			switch (s.trans_mark.trim()) {
-				case ',':
-					transition = 'pause (,)';
-					break;
-				case '>':
-					transition = 'segue (>)';
-					break;
-				case '->':
-					transition = 'jam (->)';
-					break;
-				case '':
-					transition = 'closer (.)';
-					break;
+	// ! interpret the transition mark
+	let transition = '';
+	switch (perf.trans_mark.trim()) {
+		case ',':
+			transition = 'pause (,)';
+			break;
+		case '>':
+			transition = 'segue (>)';
+			break;
+		case '->':
+			transition = 'jam (->)';
+			break;
+		case '':
+			transition = 'closer (.)';
+			break;
 
-			}
-
-			const profile = {
-
-				//! ID Props
-				distinct_id,
-				$name: topName,
-				$email: bottomName,
-				$city: s.city,
-				$country: s.country,
-				$region: s.state,
-				songid: s.songid,
-				tourid: s.tourid,
-				$avatar_url: avatar,
-
-				//! dimensions
-				position: s.position,
-				set: s.set,
-				reviews: s.reviews,
-				date: s.showdate,
-				song: s.song,
-				venue: s.venue,
-				show_gap: s.gap,
-				reviews: s.reviews,
-
-				// ! computed props
-				transition,
-				era,
-				duration_mins: mins(trackMeta?.duration),
-				url: trackMeta?.mp3_url,
-
-			};
-
-
-
-			return profile;
-		});
-
-		return profiles;
 	}
 
-	catch (e) {
-		if (NODE_ENV === 'dev') debugger;
-		throw e;
-	}
+	const profile = {
+
+		//! ID Props
+		distinct_id,
+		$name: topName,
+		$email: bottomName,
+		$city: perf.city,
+		$country: perf.country,
+		$region: perf.state,
+		songid: perf.songid,
+		tourid: perf.tourid,
+		$avatar: avatar,
+
+		//! dimensions
+		position: perf.position,
+		set: perf.set,
+		reviews: perf.reviews,
+		date: perf.showdate,
+		song: perf.song,
+		venue: perf.venue,
+		show_gap: perf.gap,
+		reviews: perf.reviews,
+
+		// ! computed props
+		transition,
+		era,
+		duration_mins: mins(trackMeta?.duration),
+		url: trackMeta?.mp3_url,
+
+	};
+
+	return profile;
 }
 
-export async function venueProfiles() {
-	const profiles = venues.map(v => {
-		const distinct_id = v.venueid;
-		const topName = v.venuename;
-		const bottomName = `${v.city}, ${v.state}`;
-		const profile = {
-			distinct_id,
-			$name: topName,
-			$email: bottomName,
-			$city: v.city,
-			$country: v.country,
-			$region: v.state
-		};
-		return profile;
-	});
+/** depends on venus
+ * @param  {} venue
+ */
+export function venueProfiles(venue) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const distinct_id = venue.venueid;
+	const topName = venue.venuename;
+	const bottomName = `${venue.city}, ${venue.state}`;
+	const profile = {
+		distinct_id,
+		$name: topName,
+		$email: bottomName,
+		$city: venue.city,
+		$country: venue.country,
+		$region: venue.state
+	};
+	return profile;
+}
+/**
+ * depends on songBank
+ * @param  {} song
+ */
+export function songProfiles(song) {
+	const distinct_id = song.songid;
+	const topName = song.song;
+	const bottomName = song.artist;
+	const profile = {
+		distinct_id,
+		$name: topName,
+		$email: bottomName,
+		debut: song.debut,
+		times_played: song.times_played,
+		last_played: song.last_played
+	};
+	return profile;
 
-	return profiles;
 }
 
-export async function songProfiles() {
-	try {
-		const profiles = songBank.map(s => {
-			const distinct_id = s.songid;
-			const topName = s.song;
-			const bottomName = s.artist;
-			const profile = {
-				distinct_id,
-				$name: topName,
-				$email: bottomName,
+/**
+ * depends on shows
+ * @param  {} show
+ */
+export function showProfiles(show) {
+	if (!LOADED) throw new Error("Data not loaded");
+	const metaData = meta.find(m => m.date === show.showdate) || {};
+	const jamNote = jamNotes.find(j => j.showid === show.showid) || {};
+	const distinct_id = show.showid;
+	const bottomName = dayjs(show.showdate).format('DD/MM/YYYY');
+	const topName = `${show.venue} - ${show.city}, ${show.state}`;
+	const avatar = metaData?.album_cover_url;
+	const duration_mins = mins(metaData?.duration);	
 
+	const profile = {
+		distinct_id,
+		$name: topName,
+		$email: bottomName,
+		$city: show.city,
+		$country: show.country,
+		$region: show.state,
+		$avatar: avatar,
+		duration_mins,
+		num_songs: metaData?.tracks?.length,
+		likes: meta?.likes,
 
-				DEBUT: s.debut,
-				TIMES_PLAYED: s.times_played,
-				LAST_PLAYED: s.last_played
-			};
-			return profile;
-		});
-		return profiles;
-	} catch (e) {
-		if (NODE_ENV === 'dev') debugger;
-		throw e;
-	}
+	};
+	return profile;
 }
-
-
 
 function mins(ms) {
 	if (!ms) return null;
@@ -335,12 +364,19 @@ function mins(ms) {
 
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-	const perfProf = await performanceProfiles();
-	const perfEv = await performanceEvents();
-	const userProfiles = await phanProfiles();
-	const attendEv = await attendanceEvents();
-	const revEv = await reviewEvents();
-	const songProf = await songProfiles();
-	const venProf = await venueProfiles();
+	if (NODE_ENV) console.log("loading data");
+	await loadData();
+	if (NODE_ENV) console.log("data loaded");
+	if (NODE_ENV) console.log("transforming data...");
+	const perfEventsMp = performances.map(pe => performanceEvents(pe));
+	const userProfilesMp = users.map(ph => phanProfiles(ph));
+	const showProfilesMp = shows.map(sh => showProfiles(sh));
+	const venueProfilesMp = venues.map(ve => venueProfiles(ve));
+	const songProfilesMp = songBank.map(so => songProfiles(so));
+	const perfProfilesMp = performances.map(pe => performanceProfiles(pe));
+	const reviewEventsMp = reviews.map(re => reviewEvents(re));
+	// const attEventsMp = attendance.map(us => attendanceEvents(us));
+
+	if (NODE_ENV) console.log("data transformed");
 	if (NODE_ENV === 'dev') debugger;
 }

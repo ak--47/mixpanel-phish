@@ -11,6 +11,7 @@
 		"songid",
 		"tourid",
 		"venueid",
+		"venuename",
 		"waystation"
 	]
 }
