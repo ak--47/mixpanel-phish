@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { existsSync } from "fs";
 import { load, touch } from './crud.js';
+import { loadJsonlToTable, resetDatabase } from "./duck.js";
 dayjs.extend(utc);
 
 const CONCURRENCY = 30;
@@ -39,6 +40,7 @@ async function getCachedData(filename, fetchData) {
 		}
 	}
 
+	//also write to the database
 	else {
 		const data = await fetchData();
 		try {
@@ -48,6 +50,15 @@ async function getCachedData(filename, fetchData) {
 			if (NODE_ENV === 'dev') debugger;
 		}
 		if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
+
+		try {
+			await loadJsonlToTable(`${TEMP_DIR}/${filename}`, filename.replace('.json', ''));
+			if (NODE_ENV === 'dev') console.log(`Loaded ${filename} to DuckDB`);
+		}
+		catch (e) {
+			if (NODE_ENV === 'dev') debugger;
+		}
+
 		return data;
 	}
 }
@@ -228,7 +239,13 @@ export async function getReviews() {
 		}));
 
 		const reviewData = await fetch(getReviewRequests);
-		return reviewData.flat();
+		const reviews = [];
+		for (const show of reviewData) {
+			if (!show?.data) continue;
+			if (!show.data.length) continue;
+			reviews.push(show.data);
+		}
+		return reviews.flat();
 	});
 }
 

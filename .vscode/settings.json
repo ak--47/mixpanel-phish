@@ -13,5 +13,7 @@
 		"venueid",
 		"venuename",
 		"waystation"
-	]
+	],
+	"sqltools.connections": [],
+	"sqltools.useNodeRuntime": true
 }

@@ -22,40 +22,26 @@ export async function touch(filename, data, append = false) {
 	// Ensure all directories in the path exist
 	await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
 
-	// Check if a file handle already exists, or create a new one if not
-	if (!fileHandles[filePath]) {
-		fileHandles[filePath] = fs.createWriteStream(filePath, {
-			flags: append ? 'a' : 'w',
-			highWaterMark: 128 * 1024 // Adjust based on needs
-		});
-
-		// Clean up the file handle on error
-		fileHandles[filePath].on('error', (e) => {
-			if (NODE_ENV === 'dev') debugger;
-			delete fileHandles[filePath]; // Remove from cache on error
-			throw e;
-		});
-
-		// Optionally close the stream on process exit to release resources
-		process.on('exit', () => {
-			fileHandles[filePath].end();
-		});
-	}
-
-	const writeStream = fileHandles[filePath];
+	// Open or reuse a write stream
+	const writeStream = fs.createWriteStream(filePath, {
+		flags: append ? 'a' : 'w',
+		highWaterMark: 128 * 1024 // Adjust as needed
+	});
 
 	return new Promise((resolve, reject) => {
-		// Write each item to the stream
-		for (const item of data) {
-			if (!writeStream.write(JSON.stringify(item) + '\n')) {
-				writeStream.once('drain', () => resolve(filePath));
-				return;
-			}
-		}
+		writeStream.on('error', reject);
+		writeStream.on('finish', () => resolve(filePath));
 
-		resolve(filePath);
+		// Write data to the file
+		data.forEach((line) => {
+			writeStream.write(`${JSON.stringify(line)}\n`);
+		});
+
+		writeStream.end();
+
 	});
 }
+
 
 // Call this function to close all file handles when they are no longer needed
 export function closeAllFileHandles() {
