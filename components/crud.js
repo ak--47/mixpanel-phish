@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { createWriteStream, createReadStream } from 'fs';
 import readline from 'readline';
-
+import Papaparse from 'papaparse';
 let TEMP_DIR;
 if (NODE_ENV === 'dev') TEMP_DIR = './tmp';
 else TEMP_DIR = tmpdir();
@@ -25,6 +25,7 @@ export async function touch(filename, data, append = false) {
 	// Open or reuse a write stream
 	const writeStream = fs.createWriteStream(filePath, {
 		flags: append ? 'a' : 'w',
+		encoding: "utf8",
 		highWaterMark: 128 * 1024 // Adjust as needed
 	});
 
@@ -53,7 +54,24 @@ export function closeAllFileHandles() {
 		delete fileHandles[key];
 	});
 }
-export async function load(filename, limit = 10000) {
+
+export async function loadCSV(filename, limit = 10000) {
+	const filePath = path.join(TEMP_DIR, filename);
+	return new Promise((resolve, reject) => {
+		Papaparse.parse(createReadStream(filePath), {
+			header: true,			
+			complete: (results) => {
+				resolve(results.data);
+			},
+			error: (error) => {
+				reject(error);
+			},
+		})
+	})
+}
+
+
+export async function loadNDJSON(filename, limit = 10000) {
 	const filePath = path.join(TEMP_DIR, filename);
 	const readStream = createReadStream(filePath, { highWaterMark: 64 * 1024 * 2 * 2 });
 	const rl = readline.createInterface({

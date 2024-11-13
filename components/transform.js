@@ -26,48 +26,12 @@ import { touch } from "./crud.js";
 const { default: ScaleArray } = await import('scale-array');
 dayjs.extend(utc);
 
-
-let attendance, shows, performances, songBank, venues, meta, reviews, users, jamNotes;
-let LOADED = false;
-
-export async function loadData() {
-	[attendance, shows, performances, songBank, venues, meta, reviews, users, jamNotes] =
-		await Promise.all([
-			getAttendance(),
-			getShows(),
-			getPerformances(),
-			getSongs(),
-			getVenues(),
-			getMetaData(),
-			getReviews(),
-			getUsers(),
-			getJamNotes()
-		]);
-	LOADED = true;
-	return {
-		attendance,
-		shows,
-		performances,
-		songBank,
-		venues,
-		meta,
-		reviews,
-		users,
-		jamNotes
-	};
-}
+import { reloadDatabase } from "./duck.js";
 
 
 
 
-/**
- * EVENTS
- */
 
-/**
- * depends on users
- * @param  {} user
- */
 export function attendanceEvents(user) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const events = [];
@@ -127,10 +91,6 @@ export function attendanceEvents(user) {
 	return events;
 }
 
-/**
- * depends on reviews
- * @param  {} review
- */
 export function reviewEvents(reviewsPayload) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const data = reviewsPayload.data;
@@ -163,10 +123,7 @@ export function reviewEvents(reviewsPayload) {
 
 }
 
-/**
- * depends on performances
- * @param  {} perf
- */
+
 export function performanceEvents(perf) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const time = dayjs.utc(perf.showdate).toISOString();
@@ -187,14 +144,7 @@ export function performanceEvents(perf) {
 	return performanceEvent;
 }
 
-/**
- * PROFILES
- */
 
-
-/**
- * depends on users
- */
 export function phanProfiles(user) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const distinct_id = user.uid;
@@ -210,10 +160,8 @@ export function phanProfiles(user) {
 	};
 }
 
-/**
- * depends on performances
- * @param  {} perf
- */
+
+
 export function performanceProfiles(perf) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const metaData = meta.find(m => m.date === perf.showdate) || {};
@@ -289,9 +237,6 @@ export function performanceProfiles(perf) {
 	return profile;
 }
 
-/** depends on venus
- * @param  {} venue
- */
 export function venueProfiles(venue) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const distinct_id = venue.venueid;
@@ -307,10 +252,8 @@ export function venueProfiles(venue) {
 	};
 	return profile;
 }
-/**
- * depends on songBank
- * @param  {} song
- */
+
+
 export function songProfiles(song) {
 	const distinct_id = song.songid;
 	const topName = song.song;
@@ -327,10 +270,7 @@ export function songProfiles(song) {
 
 }
 
-/**
- * depends on shows
- * @param  {} show
- */
+
 export function showProfiles(show) {
 	if (!LOADED) throw new Error("Data not loaded");
 	const metaData = meta.find(m => m.date === show.showdate) || {};
@@ -339,7 +279,7 @@ export function showProfiles(show) {
 	const bottomName = dayjs(show.showdate).format('DD/MM/YYYY');
 	const topName = `${show.venue} - ${show.city}, ${show.state}`;
 	const avatar = metaData?.album_cover_url;
-	const duration_mins = mins(metaData?.duration);	
+	const duration_mins = mins(metaData?.duration);
 
 	const profile = {
 		distinct_id,
@@ -357,6 +297,43 @@ export function showProfiles(show) {
 	return profile;
 }
 
+
+function jsonFlattener(sep = ".") {
+	function flatPropertiesRecurse(properties, roots = []) {
+		return Object.keys(properties)
+			.reduce((memo, prop) => {
+				// Check if the property is an object but not an array
+				const isObjectNotArray = properties[prop] !== null
+					&& typeof properties[prop] === 'object'
+					&& !Array.isArray(properties[prop]);
+
+				return Object.assign({}, memo,
+					isObjectNotArray
+						? flatPropertiesRecurse(properties[prop], roots.concat([prop]))
+						: { [roots.concat([prop]).join(sep)]: properties[prop] }
+				);
+			}, {});
+	}
+
+	return function (record) {
+		if (record.properties && typeof record.properties === 'object') {
+			record.properties = flatPropertiesRecurse(record.properties);
+			return record;
+		}
+
+		if (record.$set && typeof record.$set === 'object') {
+			record.$set = flatPropertiesRecurse(record.$set);
+			return record;
+
+		}
+
+		return {};
+
+
+	};
+}
+
+
 function mins(ms) {
 	if (!ms) return null;
 	return u.round(ms / 60000, 2);
@@ -364,19 +341,5 @@ function mins(ms) {
 
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-	if (NODE_ENV) console.log("loading data");
-	await loadData();
-	if (NODE_ENV) console.log("data loaded");
-	if (NODE_ENV) console.log("transforming data...");
-	const perfEventsMp = performances.map(pe => performanceEvents(pe));
-	const userProfilesMp = users.map(ph => phanProfiles(ph));
-	const showProfilesMp = shows.map(sh => showProfiles(sh));
-	const venueProfilesMp = venues.map(ve => venueProfiles(ve));
-	const songProfilesMp = songBank.map(so => songProfiles(so));
-	const perfProfilesMp = performances.map(pe => performanceProfiles(pe));
-	const reviewEventsMp = reviews.map(re => reviewEvents(re));
-	// const attEventsMp = attendance.map(us => attendanceEvents(us));
-
-	if (NODE_ENV) console.log("data transformed");
-	if (NODE_ENV === 'dev') debugger;
+	await reloadDatabase();
 }
