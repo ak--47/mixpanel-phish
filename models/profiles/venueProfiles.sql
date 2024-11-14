@@ -1,4 +1,7 @@
-CREATE OR REPLACE VIEW venueProfiles AS
+CREATE
+OR REPLACE VIEW venueProfiles AS
+WITH
+	TEMP AS (
     SELECT 
         v.venueid as distinct_id,
         v.venuename as name,
@@ -8,4 +11,10 @@ CREATE OR REPLACE VIEW venueProfiles AS
 		v.state as region,
     FROM
        venues v
-    
+	)
+SELECT
+	*
+FROM
+	TEMP;
+
+SELECT * FROM venueProfiles LIMIT 100;

@@ -1,4 +1,7 @@
-CREATE OR REPLACE VIEW songProfiles AS
+CREATE
+OR REPLACE VIEW songProfiles AS
+WITH
+	TEMP AS (
     SELECT 
         s.songid as distinct_id,
         s.song as name,
@@ -7,5 +10,8 @@ CREATE OR REPLACE VIEW songProfiles AS
 		s.times_played as times_played,
 		s.last_played as last_played        
     FROM
-       songs s
-    
+       songs as s
+	)
+SELECT * FROM TEMP;
+
+SELECT * FROM songProfiles LIMIT 100;

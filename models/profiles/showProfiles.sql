@@ -1,4 +1,7 @@
-CREATE OR REPLACE VIEW showProfiles AS
+CREATE
+OR REPLACE VIEW showProfiles AS
+WITH
+	TEMP AS (
     SELECT 
         s.showid as distinct_id,
         COALESCE(s.venue || ' - ' || s.city || ', ' || s.state, 'upcoming') as name,
@@ -16,4 +19,10 @@ CREATE OR REPLACE VIEW showProfiles AS
        metadata m
     ON
        s.showdate = m.date
+	)
+SELECT
+	*
+FROM
+	TEMP;
 
+SELECT * FROM showProfiles LIMIT 100;

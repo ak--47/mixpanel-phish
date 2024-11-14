@@ -187,7 +187,7 @@ export function performanceProfiles(perf) {
 
 	// ! interpret the transition mark
 	let transition = '';
-	switch (perf.trans_mark.trim()) {
+	switch (p.trans_mark.trim()) {
 		case ',':
 			transition = 'pause (,)';
 			break;
