@@ -66,10 +66,12 @@ export async function reloadDatabase() {
  * Run an SQL query with optional logging for development mode
  */
 export async function runSQL(sql, msg) {
-	const result = await connection.run(sql);
-	if (NODE_ENV === 'dev') console.log(`${msg}`, `Statement Complete`);
+	const result = await connection.all(sql);
+	if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete`);
 	return result;
 }
+
+
 
 
 export async function loadCsvToTable(filePath, tableName) {
@@ -158,7 +160,8 @@ export async function tableExists(tableName) {
 }
 
 export async function listAllTables() {
-	const tables = await connection.all("SELECT table_name FROM information_schema.tables WHERE table_schema='main'");
+	const tables = (await connection.all("SELECT table_name FROM information_schema.tables WHERE table_schema='main'"))
+		.filter(({ table_name }) => !table_name.endsWith("_view"));
 	return tables;
 
 }

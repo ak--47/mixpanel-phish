@@ -1,5 +1,5 @@
 CREATE
-OR REPLACE VIEW showProfiles AS
+OR REPLACE VIEW showProfiles_view AS
 WITH
 	TEMP AS (
     SELECT 
@@ -25,4 +25,4 @@ SELECT
 FROM
 	TEMP;
 
-SELECT * FROM showProfiles LIMIT 100;
+SELECT * FROM showProfiles_view LIMIT 100;

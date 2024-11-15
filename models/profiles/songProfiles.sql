@@ -1,5 +1,5 @@
 CREATE
-OR REPLACE VIEW songProfiles AS
+OR REPLACE VIEW songProfiles_view AS
 WITH
 	TEMP AS (
     SELECT 
@@ -14,4 +14,4 @@ WITH
 	)
 SELECT * FROM TEMP;
 
-SELECT * FROM songProfiles LIMIT 100;
+SELECT * FROM songProfiles_view LIMIT 100;

@@ -1,4 +1,5 @@
-CREATE OR REPLACE VIEW reviewEvents AS
+CREATE OR REPLACE VIEW reviewEvents_view AS
+WITH TEMP AS (
 SELECT
     r.uid AS distinct_id,
     r.username AS username,
@@ -17,6 +18,8 @@ FROM
 JOIN
     shows s ON r.showid = s.showid
 LEFT JOIN  -- Use LEFT JOIN to handle cases where metadata might be missing
-    metadata m ON r.showdate = m.date;
+    metadata m ON r.showdate = m.date
+)
+SELECT * FROM TEMP;
 
-SELECT * FROM reviewEvents LIMIT 100;
+SELECT * FROM reviewEvents_view LIMIT 100;

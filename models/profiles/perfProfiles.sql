@@ -1,5 +1,5 @@
 CREATE
-OR REPLACE VIEW perfProfiles AS
+OR REPLACE VIEW perfProfiles_view AS
 WITH
 	TEMP AS (
 		SELECT
@@ -59,4 +59,4 @@ SELECT
 FROM
 	TEMP;
 
-SELECT * FROM perfProfiles LIMIT 100;
+SELECT * FROM perfProfiles_view LIMIT 100;

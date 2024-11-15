@@ -10,3 +10,4 @@ logs/*
 .env
 .env
 .envBACKUP
+scratch.js
