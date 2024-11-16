@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW reviewEvents_view AS
+CREATE OR REPLACE VIEW review_events_view AS
 WITH TEMP AS (
 SELECT
     r.uid AS distinct_id,
@@ -22,4 +22,4 @@ LEFT JOIN  -- Use LEFT JOIN to handle cases where metadata might be missing
 )
 SELECT * FROM TEMP;
 
-SELECT * FROM reviewEvents_view LIMIT 100;
+SELECT * FROM review_events_view LIMIT 100;

@@ -15,7 +15,8 @@ import utc from 'dayjs/plugin/utc.js';
 
 dayjs.extend(utc);
 
-import { reloadDatabase, runSQL } from "./duck.js";
+import { reloadDatabase, runSQL, listAllViews, loadJsonlToTable, writeFromTableToDisk } from "./duck.js";
+import { write } from 'fs';
 
 async function main() {
 	const reloadResults = await reloadDatabase();
@@ -28,6 +29,7 @@ async function main() {
 	const models = [...eventModels, ...profileModels];
 	const modelResults = [];
 
+	//run all the models
 	for (const model of models) {
 		const modelName = path.basename(model);
 		const result = await runSQL(await load(model));
@@ -35,6 +37,18 @@ async function main() {
 	}
 
 	//unload all the views to JSON
+	const views = await listAllViews();
+	const viewResults = [];
+
+	for (const { table_name } of views) {
+		try {		
+		const writeResult = await writeFromTableToDisk(table_name)
+		viewResults.push({ table_name, writeResult });
+		}
+		catch (e) {
+			if (NODE_ENV === 'dev') debugger;
+		}
+	}
 
 
 

@@ -1,5 +1,5 @@
 CREATE
-OR REPLACE VIEW venueProfiles_view AS
+OR REPLACE VIEW venue_profiles_view AS
 WITH
 	TEMP AS (
     SELECT 
@@ -17,4 +17,4 @@ SELECT
 FROM
 	TEMP;
 
-SELECT * FROM venueProfiles_view LIMIT 100;
+SELECT * FROM venue_profiles_view LIMIT 100;

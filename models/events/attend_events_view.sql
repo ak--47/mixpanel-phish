@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW attendEvents_view AS
+CREATE OR REPLACE VIEW attend_events_view AS
 WITH
 	TEMP AS (
 		SELECT
@@ -24,6 +24,6 @@ FROM
 SELECT
 	*
 FROM
-	attendEvents_view
+	attend_events_view
 LIMIT
 	100;

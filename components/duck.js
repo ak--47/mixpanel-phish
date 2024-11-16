@@ -7,7 +7,7 @@ import path from 'path';
 import { tmpdir } from 'os';
 const { NODE_ENV = "" } = process.env;
 if (!NODE_ENV) throw new Error("NODE_ENV is required");
-import { ls } from "ak-tools";
+import { ls, rm, makeExist } from "ak-tools";
 
 let TEMP_DIR;
 if (NODE_ENV === 'dev') TEMP_DIR = './tmp';
@@ -19,6 +19,9 @@ TEMP_DIR = path.resolve(TEMP_DIR);
 // await fs.unlink(path.join(TEMP_DIR, 'duckdb.db'))
 const db = await Database.create(path.join(TEMP_DIR, 'duckdb.db'));
 const connection = await db.connect();
+const AK_LOCAL_YOKEL = '/Volumes/AKbumper';
+await connection.run("PRAGMA max_temp_directory_size='300GiB'");
+if (NODE_ENV === 'dev') await connection.run(`PRAGMA temp_directory='${AK_LOCAL_YOKEL}'`);
 
 
 /**
@@ -66,13 +69,16 @@ export async function reloadDatabase() {
  * Run an SQL query with optional logging for development mode
  */
 export async function runSQL(sql, msg) {
-	const result = await connection.all(sql);
-	if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete`);
-	return result;
+	try {
+		const result = await connection.all(sql);
+		if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete`);
+		return result;
+	}
+	catch (e) {
+		sql, msg;
+		if (NODE_ENV === 'dev') debugger;
+	}
 }
-
-
-
 
 export async function loadCsvToTable(filePath, tableName) {
 	if (!filePath) throw new Error('filePath is required');
@@ -121,6 +127,21 @@ export async function loadJsonlToTable(filePath, tableName) {
 	}
 
 	return schema;
+}
+
+export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 100) {
+	if (!tableName) throw new Error('tableName is required');
+	if (NODE_ENV === 'dev') TEMP_DIR = AK_LOCAL_YOKEL;
+	const filePath = path.join(TEMP_DIR, `/output/${tableName}`);
+	await rm(filePath);
+	await makeExist(filePath);
+	await connection.run(`
+		COPY ${tableName} 
+		TO '${filePath}' 
+		(FORMAT ${format}, FILE_SIZE_BYTES ${mb * 1024 * 1024});
+		`);
+	if (NODE_ENV === 'dev') console.log(`wrote ${tableName} to ${filePath}`);
+	return await ls(filePath);
 }
 
 /**
@@ -178,42 +199,6 @@ export async function getSchema(tableName) {
 	return schema;
 }
 
-
-// First, let's load both files with explicit show of schema
-export async function debugJsonLoading(conn = connection) {
-	// Try loading with explicit JSON parsing and inspecting structure
-	await conn.run(`
-        CREATE OR REPLACE TABLE performances_debug AS 
-        SELECT * FROM read_json('${TEMP_DIR}/performances-small.json',  format='newline_delimited', records='auto', auto_detect=true)
-    `);
-
-	// Compare with a direct read_json_auto
-	await conn.run(`
-        CREATE OR REPLACE TABLE performances_auto AS 
-        SELECT * FROM read_json_auto('${TEMP_DIR}/performances-small.json',
-		format='newline_delimited', records='auto', auto_detect=true)
-    `);
-
-	// Check the schemas
-	const debugSchema = await conn.all(`
-        DESCRIBE performances_debug
-    `);
-
-	const autoSchema = await conn.all(`
-        DESCRIBE performances_auto
-    `);
-
-	await conn.run(`
-        CREATE OR REPLACE TABLE songs_debug AS 
-        SELECT * FROM read_json('${TEMP_DIR}/songs.json', format='newline_delimited', records='true')
-    `);
-	const songsDebugSchema = await conn.all(`
-		DESCRIBE songs_debug
-	`);
-
-	console.log('Debug Schema:', debugSchema);
-	console.log('Auto Schema:', autoSchema);
-}
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	// await resetDatabase();

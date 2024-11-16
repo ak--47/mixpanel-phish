@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW heardSongs_view AS
+CREATE OR REPLACE VIEW heardsong_events_view AS
 WITH TEMP AS (
     SELECT
         a.uid AS distinct_id,
@@ -15,8 +15,9 @@ WITH TEMP AS (
         track.mp3_url AS url,
 		ROW_NUMBER() OVER (PARTITION BY a.uid, a.showid ORDER BY track.position) AS song_number  -- Calculate song number for time offset
     FROM
-		--  (SELECT * FROM attendance WHERE uid='104' LIMIT 10) AS a
-        attendance a
+		attendance a
+		-- (SELECT * FROM attendance LIMIT 2000) AS a
+		--  (SELECT * FROM attendance WHERE uid='104' LIMIT 10) AS a        
         JOIN shows s ON a.showid = s.showid
         JOIN metadata m ON a.showdate = m.date,
         UNNEST(m.tracks) as tracks(track)
@@ -26,4 +27,4 @@ SELECT
     show_date + (song_number - 1) * 4 * INTERVAL '1 minute' + (song_number - 1) * 20 * INTERVAL '1 second' AS time  -- Add the time offset
  FROM TEMP;
 
--- SELECT * FROM heardSongs_view LIMIT 1000;
+-- SELECT * FROM heardsong_events_view LIMIT 1000;
