@@ -7,25 +7,22 @@ WITH
 			CONCAT_WS (
 				'-',
 				m.date,
-				unnest.set_name,
-				unnest.position,
-				unnest.slug
+				track.set_name,
+				track.position,
+				track.slug
 			) AS distinct_id,
-			unnest.title || ' (' || m.date || ')' AS name,
+			track.title || ' (' || m.date || ')' AS name,
 			s.venue || ' - ' || s.city || ', ' || s.state AS email,
-			m.album_cover_url AS avatar,
-			
-			
-
+			m.album_cover_url AS avatar,						
 			m.date AS show_date,
 			COALESCE(m.tour_name, p.tourname) AS tour_name,
-			unnest.slug AS track_slug,
-			unnest.title AS track_title,
-			unnest.position AS track_position,
-			ROUND(unnest.duration / 60000, 2) AS duration_mins,
-			unnest.set_name AS set_name,
-			unnest.likes_count AS track_likes,
-			unnest.mp3_url AS track_url,
+			track.slug AS track_slug,
+			track.title AS track_title,
+			track.position AS track_position,
+			ROUND(track.duration / 60000, 2) AS duration_mins,
+			track.set_name AS set_name,
+			track.likes_count AS track_likes,
+			track.mp3_url AS track_url,
 			s.venue as venue,
 			p.reviews as reviews,
 			p.gap AS gap,
@@ -50,9 +47,9 @@ WITH
 		FROM
 			metadata AS m
 			JOIN shows AS s ON s.showdate = m.date
-			CROSS JOIN UNNEST (m.tracks) -- can't seem to alias this... 
+			CROSS JOIN UNNEST(m.tracks) as tracks(track) -- can't seem to alias this... 
 			JOIN performances p ON p.showdate = m.date
-			AND p.slug = unnest.slug
+			AND p.slug = track.slug
 	)
 SELECT
 	*

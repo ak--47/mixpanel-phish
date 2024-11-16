@@ -9,17 +9,17 @@ WITH TEMP AS (
         a.venueid AS venue_id,
         m.venue.latitude AS latitude,
         m.venue.longitude AS longitude,
-        unnest.slug AS track_slug,
-        unnest.title AS song_name,
-        ROUND(unnest.duration / 60000, 2) AS duration_mins,
-        unnest.mp3_url AS url,
-		ROW_NUMBER() OVER (PARTITION BY a.uid, a.showid ORDER BY unnest.position) AS song_number  -- Calculate song number for time offset
+        track.slug AS track_slug,
+        track.title AS song_name,
+        ROUND(track.duration / 60000, 2) AS duration_mins,
+        track.mp3_url AS url,
+		ROW_NUMBER() OVER (PARTITION BY a.uid, a.showid ORDER BY track.position) AS song_number  -- Calculate song number for time offset
     FROM
 		--  (SELECT * FROM attendance WHERE uid='104' LIMIT 10) AS a
         attendance a
         JOIN shows s ON a.showid = s.showid
         JOIN metadata m ON a.showdate = m.date,
-        UNNEST(m.tracks)
+        UNNEST(m.tracks) as tracks(track)
 )
 SELECT 
 	*,
