@@ -3,7 +3,7 @@ WITH TEMP AS (
 SELECT
     r.uid AS distinct_id,
     r.username AS username,
-    r.showdate AS time,  -- Assuming r.showdate is already in the desired format
+    r.showdate + INTERVAL '24 HOUR' AS time, -- review always comes after the show...,
     'reviewed show' AS event,
     r.showid AS show_id,
     s.venueid AS venue_id,

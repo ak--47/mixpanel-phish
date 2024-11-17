@@ -15,13 +15,8 @@ else TEMP_DIR = tmpdir();
 TEMP_DIR = path.resolve(TEMP_DIR);
 
 // Initialize DuckDB... won't want persistence, but we do want spill to disk
-// so we can handle large datasets
-// await fs.unlink(path.join(TEMP_DIR, 'duckdb.db'))
 const db = await Database.create(path.join(TEMP_DIR, 'duckdb.db'));
 const connection = await db.connect();
-const AK_LOCAL_YOKEL = '/Volumes/AKbumper';
-if (NODE_ENV === 'dev') await connection.run("PRAGMA max_temp_directory_size='500GiB'");
-if (NODE_ENV === 'dev') await connection.run(`PRAGMA temp_directory='${AK_LOCAL_YOKEL}'`);
 
 
 /**
@@ -42,8 +37,11 @@ export async function resetDatabase() {
 	for (const { table_name } of views) {
 		await connection.run(`DROP VIEW IF EXISTS ${table_name}`);
 	}
+	
+	const writePath = path.resolve(TEMP_DIR, 'output')
+	const deleted = await rm(writePath);
 
-	if (NODE_ENV === 'dev') console.log('Database reset: all tables and views dropped');
+	if (NODE_ENV === 'dev') console.log('Database reset: all tables and views dropped; temp directory cleared');
 }
 
 export async function reloadDatabase() {
@@ -71,7 +69,7 @@ export async function reloadDatabase() {
 export async function runSQL(sql, msg) {
 	try {
 		const result = await connection.all(sql);
-		if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete\n\n`);
+		if (NODE_ENV === 'dev') console.log(`\n${msg || sql}`, `Statement Complete\n\n`);
 		return result;
 	}
 	catch (e) {
@@ -129,7 +127,7 @@ export async function loadJsonlToTable(filePath, tableName) {
 	return { table: tableName, schema };
 }
 
-export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 30) {
+export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 10) {
 	if (!tableName) throw new Error('tableName is required');
 	// if (NODE_ENV === 'dev') TEMP_DIR = AK_LOCAL_YOKEL;
 	const filePath = path.join(TEMP_DIR, `/output/${tableName}`);

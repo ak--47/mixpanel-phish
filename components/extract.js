@@ -18,7 +18,7 @@ import utc from 'dayjs/plugin/utc.js';
 import { existsSync } from "fs";
 import { loadNDJSON, loadCSV } from './crud.js';
 import { loadJsonlToTable, resetDatabase, getSchema } from "./duck.js";
-import { rm } from 'ak-tools';
+import { rm, ls } from 'ak-tools';
 dayjs.extend(utc);
 
 const CONCURRENCY = 30;
@@ -342,6 +342,31 @@ export async function getReviews() {
 	});
 }
 
+export async function main() {
+	if (NODE_ENV === 'dev') console.log("\nGetting users...");
+	const users = await getUsers();
+	if (NODE_ENV === 'dev') console.log("Getting shows...");
+	const shows = await getShows();
+	if (NODE_ENV === 'dev') console.log("Getting venues...");
+	const venues = await getVenues();
+	if (NODE_ENV === 'dev') console.log("Getting jam notes...");
+	const notes = await getJamNotes();
+	if (NODE_ENV === 'dev') console.log("Getting songs...");
+	const songs = await getSongs();
+	if (NODE_ENV === 'dev') console.log("Getting performances, metadata, reviews, and attendance...");
+	const [performances, metadata, review, attendance] = await Promise.all([
+		getPerformances(),
+		getMetaData(),
+		getReviews(),
+		getAttendance(),
+	]);
+
+	if (NODE_ENV === 'dev') console.log("Done fetching data\n");
+
+	return { users, shows, venues, notes, songs, performances, metadata, review, attendance };
+
+}
+
 
 /**
  * HELPERS
@@ -359,26 +384,18 @@ function nestedData(response) {
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-
-	const users = await getUsers();
-	const shows = await getShows();
-	const venues = await getVenues();
-	const notes = await getJamNotes();
-	const songs = await getSongs();
-
-	const [performances, metadata, review, attendance] = await Promise.all([
-		getPerformances(),
-		getMetaData(),
-		getReviews(),
-		getAttendance(),
-	]);
-
-	// const st = await getPerformances();
-	// const perfMeta = await getMetaData();
-	// const r = await getReviews();
-	// const a = await getAttendance();
-
-
+	// to re-fetch the data...
+	// const files = await ls(TEMP_DIR);
+	// for (const file of files) {
+	// 	await rm(file);
+	// }
+	let result;
+	try {
+		result = await main();
+	}
+	catch (e) {
+		if (NODE_ENV === 'dev') debugger;
+	}
 
 	if (NODE_ENV === 'dev') debugger;
 }

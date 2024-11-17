@@ -9,14 +9,11 @@ else TEMP_DIR = tmpdir();
 TEMP_DIR = path.resolve(TEMP_DIR);
 
 
-import { ls, load } from 'ak-tools';
+import { ls, load, rm } from 'ak-tools';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-
 dayjs.extend(utc);
-
-import { reloadDatabase, runSQL, listAllViews, loadJsonlToTable, writeFromTableToDisk } from "./duck.js";
-import { write } from 'fs';
+import { reloadDatabase, runSQL, listAllViews, writeFromTableToDisk } from "./duck.js";
 
 async function main() {
 	const reloadResults = await reloadDatabase();
@@ -41,9 +38,9 @@ async function main() {
 	const viewResults = [];
 
 	for (const { table_name } of views) {
-		try {		
-		const writeResult = await writeFromTableToDisk(table_name)
-		viewResults.push({ table_name, writeResult });
+		try {
+			const writeResult = await writeFromTableToDisk(table_name);
+			viewResults.push({ table_name, writeResult });
 		}
 		catch (e) {
 			if (NODE_ENV === 'dev') debugger;
@@ -58,5 +55,18 @@ async function main() {
 
 
 if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-	await main();
+	// to re-fetch the data...
+	// const files = await ls(TEMP_DIR);
+	// for (const file of files) {
+	// 	await rm(file);
+	// }
+	let result;
+	try {
+		result = await main();
+	}
+	catch (e) {
+		if (NODE_ENV === 'dev') debugger;
+	}
+
+	if (NODE_ENV === 'dev') debugger;
 }

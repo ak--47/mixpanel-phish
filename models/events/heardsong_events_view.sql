@@ -17,7 +17,8 @@ TEMP AS (
     SELECT
         a.uid AS distinct_id,
         a.username AS username,
-        a.showdate AS show_date,
+		-- first heard song event comes after attended show
+        a.showdate + INTERVAL '4 minutes' + INTERVAL '20 seconds' AS show_date, 
         'heard song' AS event,
         a.showid AS show_id,
         a.venueid AS venue_id,
