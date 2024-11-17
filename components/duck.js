@@ -20,7 +20,7 @@ TEMP_DIR = path.resolve(TEMP_DIR);
 const db = await Database.create(path.join(TEMP_DIR, 'duckdb.db'));
 const connection = await db.connect();
 const AK_LOCAL_YOKEL = '/Volumes/AKbumper';
-await connection.run("PRAGMA max_temp_directory_size='300GiB'");
+if (NODE_ENV === 'dev') await connection.run("PRAGMA max_temp_directory_size='500GiB'");
 if (NODE_ENV === 'dev') await connection.run(`PRAGMA temp_directory='${AK_LOCAL_YOKEL}'`);
 
 
@@ -71,7 +71,7 @@ export async function reloadDatabase() {
 export async function runSQL(sql, msg) {
 	try {
 		const result = await connection.all(sql);
-		if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete`);
+		if (NODE_ENV === 'dev') console.log(`${msg || sql}`, `Statement Complete\n\n`);
 		return result;
 	}
 	catch (e) {
@@ -126,12 +126,12 @@ export async function loadJsonlToTable(filePath, tableName) {
 
 	}
 
-	return schema;
+	return { table: tableName, schema };
 }
 
-export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 100) {
+export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 30) {
 	if (!tableName) throw new Error('tableName is required');
-	if (NODE_ENV === 'dev') TEMP_DIR = AK_LOCAL_YOKEL;
+	// if (NODE_ENV === 'dev') TEMP_DIR = AK_LOCAL_YOKEL;
 	const filePath = path.join(TEMP_DIR, `/output/${tableName}`);
 	await rm(filePath);
 	await makeExist(filePath);

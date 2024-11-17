@@ -52,7 +52,7 @@ async function main() {
 
 
 
-	debugger;
+	return { reloadResults, modelResults, viewResults };
 }
 
 
