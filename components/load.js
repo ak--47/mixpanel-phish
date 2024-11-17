@@ -156,7 +156,22 @@ export async function main(directory = "output") {
 			abridged: true,
 			strict: true,
 			fixData: true,
-			workers: 50
+			workers: 50,
+			transformFunc: function cleanUp(record) {
+				
+				// $latitude and $longitude are required, but SQL can't have $ in column names
+				// https://docs.mixpanel.com/docs/tracking-best-practices/geolocation#define-latitude-and-longitude
+				if (record.properties) {
+					if (record.properties.latitude) {
+						record.properties.$latitude = record.properties.latitude;
+						delete record.properties.latitude;
+					}
+					if (record.properties.longitude) {
+						record.properties.$longitude = record.properties.longitude;
+						delete record.properties.longitude;
+					}
+				}
+			}
 		};
 
 		/** @type {mp.Options} */

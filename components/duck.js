@@ -69,7 +69,7 @@ export async function reloadDatabase() {
 export async function runSQL(sql, msg) {
 	try {
 		const result = await connection.all(sql);
-		if (NODE_ENV === 'dev') console.log(`\n${msg || sql}`, `Statement Complete\n\n`);
+		// if (NODE_ENV === 'dev') console.log(`\n${msg || sql}`, `Statement Complete\n\n`);
 		return result;
 	}
 	catch (e) {
