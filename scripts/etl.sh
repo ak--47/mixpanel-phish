@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# export NODE_OPTIONS="--max-old-space-size=4096"
+# export NODE_OPTIONS="--max-old-space-size=8192"
+# export NODE_OPTIONS="--max-old-space-size=16384"
+export NODE_OPTIONS="--max-old-space-size=32768"
+
 # Set script to exit on any error
 set -e
 
