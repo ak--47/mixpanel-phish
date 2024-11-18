@@ -30,7 +30,7 @@ run_script() {
     echo -e "${GREEN}Finished $script - Duration: $duration seconds${NC}"
 }
 
-echo -e "${BLUE}Starting ETL pipeline...${NC}"
+echo -e "\n${BLUE}Starting ETL pipeline...${NC}\n"
 total_start_time=$(date +%s)
 
 # Extract
@@ -45,5 +45,5 @@ run_script "./components/load.js"
 total_end_time=$(date +%s)
 total_duration=$((total_end_time - total_start_time))
 
-echo -e "\n${GREEN}ETL pipeline completed successfully${NC}"
-echo -e "${GREEN}Total duration: $total_duration seconds${NC}"
+echo -e "\n${GREEN}ETL pipeline completed successfully${NC}\n"
+echo -e "\n${GREEN}Total duration: $total_duration seconds${NC}\n"
