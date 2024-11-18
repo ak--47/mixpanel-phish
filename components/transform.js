@@ -35,7 +35,6 @@ async function main() {
 		modelResults.push({ modelName, result });
 		
 	}
-	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
 	//unload all the views to JSON
 	const views = await listAllViews();

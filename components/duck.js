@@ -37,8 +37,8 @@ export async function resetDatabase() {
 	for (const { table_name } of views) {
 		await connection.run(`DROP VIEW IF EXISTS ${table_name}`);
 	}
-	
-	const writePath = path.resolve(TEMP_DIR, 'output')
+
+	const writePath = path.resolve(TEMP_DIR, 'output');
 	const deleted = await rm(writePath);
 
 	if (NODE_ENV === 'dev') console.log('\nDatabase reset: all tables and views dropped; temp directory cleared\n');
@@ -127,7 +127,7 @@ export async function loadJsonlToTable(filePath, tableName) {
 	return { table: tableName, schema };
 }
 
-export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 10) {
+export async function writeFromTableToDisk(tableName, format = "PARQUET", mb = 50) {
 	if (!tableName) throw new Error('tableName is required');
 	// if (NODE_ENV === 'dev') TEMP_DIR = AK_LOCAL_YOKEL;
 	const filePath = path.join(TEMP_DIR, `/output/${tableName}`);

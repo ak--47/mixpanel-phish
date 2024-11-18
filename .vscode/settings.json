@@ -5,12 +5,15 @@
 	"cSpell.words": [
 		"heardsong",
 		"Phan",
+		"reviewid",
 		"setlist",
 		"Setlists",
 		"showdate",
 		"showid",
 		"songid",
+		"STRFTIME",
 		"tourid",
+		"tourname",
 		"venueid",
 		"venuename",
 		"waystation"

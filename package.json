@@ -12,8 +12,7 @@
     "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "type": "module",
-  "keywords": [
-  ],
+  "keywords": [],
   "author": "ak@mixpanel.com",
   "license": "ISC",
   "description": "ETL pipeline for loading Phish data into Mixpanel",
@@ -25,7 +24,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "duckdb-async": "^1.1.1",
-    "mixpanel-import": "^2.7.1",
+    "mixpanel-import": "^2.7.2",
     "papaparse": "^5.4.1",
     "scale-array": "^1.0.1"
   },

@@ -3,10 +3,12 @@ OR REPLACE VIEW show_profiles_view AS
 WITH
 	TEMP AS (
     SELECT 
+		-- required Mixpanel fields
         s.showid as distinct_id,
         COALESCE(s.venue || ' - ' || s.city || ', ' || s.state, 'upcoming') as name,
         STRFTIME(s.showdate, '%d/%m/%Y') as email,
-        s.city as city,
+        
+		s.city as city,
         s.country as country,
         s.state as region,
         m.album_cover_url as avatar,
