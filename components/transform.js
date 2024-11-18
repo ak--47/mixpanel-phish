@@ -17,6 +17,8 @@ import { reloadDatabase, runSQL, listAllViews, writeFromTableToDisk } from "./du
 
 async function main() {
 	const reloadResults = await reloadDatabase();
+	
+	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
 	// construct our views
 	const eventModels = (await ls('./models/events'))
@@ -31,7 +33,9 @@ async function main() {
 		const modelName = path.basename(model);
 		const result = await runSQL(await load(model));
 		modelResults.push({ modelName, result });
+		
 	}
+	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
 	//unload all the views to JSON
 	const views = await listAllViews();
@@ -46,6 +50,7 @@ async function main() {
 			if (NODE_ENV === 'dev') debugger;
 		}
 	}
+	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
 
 

@@ -41,7 +41,7 @@ export async function resetDatabase() {
 	const writePath = path.resolve(TEMP_DIR, 'output')
 	const deleted = await rm(writePath);
 
-	if (NODE_ENV === 'dev') console.log('Database reset: all tables and views dropped; temp directory cleared');
+	if (NODE_ENV === 'dev') console.log('\nDatabase reset: all tables and views dropped; temp directory cleared\n');
 }
 
 export async function reloadDatabase() {

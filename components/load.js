@@ -59,7 +59,9 @@ export async function main(directory = "output") {
 						delete record.properties.longitude;
 					}
 				}
+				return record;
 			}
+			
 		};
 
 		/** @type {mp.Options} */
