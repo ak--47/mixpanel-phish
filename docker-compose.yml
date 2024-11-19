@@ -1,0 +1,15 @@
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - API_KEY=${API_KEY}
+      - MIXPANEL_TOKEN=${MIXPANEL_TOKEN}
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/usr/src/app
+    command: ["bash", "./scripts/etl.sh"]

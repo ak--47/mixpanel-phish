@@ -15,9 +15,9 @@ import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 import { reloadDatabase, runSQL, listAllViews, writeFromTableToDisk } from "./duck.js";
 
-async function main() {
+async function main(modelName = "") {
 	const reloadResults = await reloadDatabase();
-	
+
 	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
 	// construct our views
@@ -25,7 +25,8 @@ async function main() {
 		.filter(f => f.endsWith('.sql'));
 	const profileModels = (await ls('./models/profiles'))
 		.filter(f => f.endsWith('.sql'));
-	const models = [...eventModels, ...profileModels];
+	let models = [...eventModels, ...profileModels];
+	if (modelName) models = models.filter(m => m.includes(modelName));
 	const modelResults = [];
 
 	//run all the models
@@ -33,7 +34,7 @@ async function main() {
 		const modelName = path.basename(model);
 		const result = await runSQL(await load(model));
 		modelResults.push({ modelName, result });
-		
+
 	}
 
 	//unload all the views to JSON

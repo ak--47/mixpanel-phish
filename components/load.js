@@ -108,7 +108,7 @@ export async function main(directory = "output") {
 		if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
 		results[model] = importResults;
 	}
-	await touch(path.resolve(TEMP_DIR, 'results.json'), results, true, false, false);
+	await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
 	return results;
 }
 
