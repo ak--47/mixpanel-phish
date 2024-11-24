@@ -23,7 +23,7 @@ SELECT
 		WHEN r.showdate < '2020-02-23' THEN '3.0'
 		WHEN r.showdate > '2020-02-23' THEN '4.0'
 		ELSE 'unknown'
-	END AS era,
+	END AS era
 	
 FROM
     reviews r
@@ -34,4 +34,4 @@ LEFT JOIN  -- Use LEFT JOIN to handle cases where metadata might be missing
 )
 SELECT * FROM TEMP;
 
-SELECT * FROM review_events_view LIMIT 100;
+SELECT * FROM review_events_view LIMIT 10;

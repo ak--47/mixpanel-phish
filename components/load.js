@@ -4,16 +4,30 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { rm, ls, makeExist, isDirOrFile, details, touch } from 'ak-tools';
 dotenv.config();
-const { NODE_ENV = "", MIXPANEL_TOKEN = "" } = process.env;
+const { NODE_ENV = "", MIXPANEL_TOKEN = "", MIXPANEL_SECRET = "", MIXPANEL_PROJECT = "", MIXPANEL_BEARER = "" } = process.env;
 let TEMP_DIR;
 if (NODE_ENV === 'dev') TEMP_DIR = './tmp';
 else TEMP_DIR = tmpdir();
 TEMP_DIR = path.resolve(TEMP_DIR);
 if (!NODE_ENV) throw new Error("NODE_ENV is required");
 if (!MIXPANEL_TOKEN) throw new Error("MIXPANEL_TOKEN is required");
+if (!MIXPANEL_SECRET) throw new Error("MIXPANEL_SECRET is required");
+if (!MIXPANEL_PROJECT) throw new Error("MIXPANEL_PROJECT is required");
+if (!MIXPANEL_BEARER) throw new Error("MIXPANEL_BEARER is required");
 import mp from 'mixpanel-import';
+import { annotations } from "./timeline.js";
 
-export async function main(directory = "output") {
+/** @type {mp.Creds} */
+const importCreds = {
+	token: MIXPANEL_TOKEN,
+	project: MIXPANEL_PROJECT,
+	secret: MIXPANEL_SECRET,
+	bearer: MIXPANEL_BEARER
+};
+
+
+export default async function main(directory = "output") {
+		
 	const fileSystem = (await ls(path.resolve(TEMP_DIR, directory)))
 		.filter((dir) => isDirOrFile(dir) === 'directory')
 		.map((dir) => details(dir))
@@ -23,12 +37,10 @@ export async function main(directory = "output") {
 			return dir;
 		});
 
-	/** @type {mp.Creds} */
-	const importCreds = {
-		token: MIXPANEL_TOKEN,
-	};
 
-	const results = {};
+	const results = {fileSystem};
+	const profileDeletes = await deleteProfiles();
+	results.profileDeletes = profileDeletes;
 
 
 	//we iterate over the directories, and load the data into mixpanel
@@ -46,7 +58,7 @@ export async function main(directory = "output") {
 			fixData: true,
 			workers: 50,
 			transformFunc: function cleanUp(record) {
-				
+
 				// $latitude and $longitude are required, but SQL can't have $ in column names
 				// https://docs.mixpanel.com/docs/tracking-best-practices/geolocation#define-latitude-and-longitude
 				if (record.properties) {
@@ -61,7 +73,7 @@ export async function main(directory = "output") {
 				}
 				return record;
 			}
-			
+
 		};
 
 		/** @type {mp.Options} */
@@ -69,12 +81,15 @@ export async function main(directory = "output") {
 
 		switch (model) {
 			case "attend_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
 				break;
 
 			case "heardsong_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
 				break;
 
 			case "review_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
 				break;
 
 			case "user_profiles_view":
@@ -108,8 +123,46 @@ export async function main(directory = "output") {
 		if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
 		results[model] = importResults;
 	}
+	const loadedAnnotations = await loadChartAnnotations();
+	results.annotations = loadedAnnotations?.dryRun || [];
 	await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
 	return results;
+}
+
+async function deleteProfiles() {
+	const { PERF_GROUP_ID, SHOW_GROUP_ID, SONG_GROUP_ID } = process.env;
+	if (!PERF_GROUP_ID) throw new Error("PERF_GROUP_ID is required");
+	if (!SHOW_GROUP_ID) throw new Error("SHOW_GROUP_ID is required");
+	if (!SONG_GROUP_ID) throw new Error("SONG_GROUP_ID is required");
+
+	/** @type {mp.Options} */
+	const commonOpts = {
+		recordType: "profile-delete",
+		verbose: false,
+		showProgress: true
+	};
+
+	const users = await mp(importCreds, null, { ...commonOpts });
+	const shows = await mp(importCreds, null, { ...commonOpts, groupKey: "show_id", dataGroupId: SHOW_GROUP_ID });
+	const performances = await mp(importCreds, null, { ...commonOpts, groupKey: "performance_id", dataGroupId: PERF_GROUP_ID });
+	const songs = await mp(importCreds, null, { ...commonOpts, groupKey: "song_id", dataGroupId: SONG_GROUP_ID });
+
+
+	return { users, shows, performances, songs };
+
+}
+
+async function loadChartAnnotations() {
+
+	/** @type {mp.Options} */
+	const options = {
+		recordType: "annotations",
+		verbose: false,
+		showProgress: true
+	};
+	const deleted = await mp(importCreds, null, { ...options, recordType: "delete-annotations" });
+	const importedAnnotations = await mp(importCreds, annotations, options);
+	return importedAnnotations;
 }
 
 
@@ -122,6 +175,8 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	let result;
 	try {
 		result = await main();
+		// result = await deleteProfiles();
+		// result = await loadChartAnnotations();
 	}
 	catch (e) {
 		if (NODE_ENV === 'dev') debugger;

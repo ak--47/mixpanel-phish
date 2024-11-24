@@ -1,6 +1,5 @@
 CREATE
-OR REPLACE VIEW performance_profiles_view
- AS
+OR REPLACE VIEW performance_profiles_view AS
 WITH
 	TEMP AS (
 		SELECT
@@ -14,9 +13,8 @@ WITH
 			) AS distinct_id,
 			track.title || ' (' || m.date || ')' AS name,
 			s.venue || ' - ' || s.city || ', ' || s.state AS email,
-			
 			-- analysis fields
-			m.album_cover_url AS avatar,						
+			m.album_cover_url AS avatar,
 			m.date AS show_date,
 			COALESCE(m.tour_name, p.tourname) AS tour_name,
 			track.slug AS track_slug,
@@ -31,7 +29,7 @@ WITH
 			p.gap AS gap,
 			p.songid AS song_id,
 			p.showid AS show_id,
-			
+			n.jamchart_description AS jam_notes,
 			-- interesting modeling things			
 			CASE TRIM(p.trans_mark)
 				WHEN ',' THEN 'pause (,)'
@@ -49,14 +47,23 @@ WITH
 		FROM
 			metadata AS m
 			JOIN shows AS s ON s.showdate = m.date
-			CROSS JOIN UNNEST(m.tracks) as tracks(track) -- can't seem to alias this... 
+			CROSS JOIN UNNEST (m.tracks) as tracks (track) -- can't seem to alias this... 
 			JOIN performances p ON p.showdate = m.date
-			AND p.slug = track.slug
+			AND p.slug = track.slug			
+            LEFT JOIN  notes n ON 
+			p.showdate = n.showdate AND p.set = n.set AND p.position = n.position AND p.slug = n.slug
+
 	)
 SELECT
 	*
 FROM
 	TEMP;
 
-SELECT * FROM performance_profiles_view
- LIMIT 100;
+SELECT
+	*
+FROM
+	performance_profiles_view
+WHERE
+	jam_notes not null
+LIMIT
+	100;

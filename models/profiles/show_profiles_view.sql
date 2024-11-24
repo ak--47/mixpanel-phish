@@ -14,17 +14,22 @@ WITH
         m.album_cover_url as avatar,
         ROUND(m.duration / 60000, 2) as duration_mins,
         json_array_length(CAST(m.tracks AS JSON)) as num_songs,
-        m.likes_count as likes
+        m.likes_count as likes,
+		n.reviews as reviews,
+		n.setlistnotes as setlist_notes,
+		n.soundcheck as soundcheck,
+		n.footnote as footnote
     FROM
        shows s
     JOIN
        metadata m
     ON
        s.showdate = m.date
+	JOIN notes n ON n.showid = s.showid
 	)
 SELECT
 	*
 FROM
 	TEMP;
 
-SELECT * FROM show_profiles_view LIMIT 100;
+SELECT * FROM show_profiles_view LIMIT 10;

@@ -61,4 +61,4 @@ SELECT
 FROM
     TEMP;
 
-SELECT * FROM heardsong_events_view LIMIT 1000;
+SELECT * FROM heardsong_events_view LIMIT 10;

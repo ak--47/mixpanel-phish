@@ -5,6 +5,20 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "SQL",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "duckdb",
+			"args": [
+				"./tmp/duckdb.db",
+				"-init",
+				"${file}"
+			],
+			"cwd": "${workspaceFolder}",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
+		{
 			"type": "node",
 			"request": "launch",
 			"name": "go",
@@ -15,31 +29,33 @@
 			"internalConsoleOptions": "neverOpen",
 			"args": [
 				"--ignore",
-				"/tmp/",				
+				"/tmp/",
 			],
 			"env": {
 				"NODE_ENV": "dev"
 			}
 		},
 		{
-            "type": "node",
-            "request": "launch",
-            "name": "local",
-            "runtimeExecutable": "npm",
-            "runtimeArgs": ["run", "local"],
-            "restart": true,
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "env": {
-                "NODE_ENV": "dev"
-            }
-        },
+			"type": "node",
+			"request": "launch",
+			"name": "local",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": [
+				"run",
+				"local"
+			],
+			"restart": true,
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"env": {
+				"NODE_ENV": "dev"
+			}
+		},
 		{
 			"command": "npm run fire",
 			"name": "FIRE",
 			"request": "launch",
 			"type": "node-terminal",
 		}
-		
 	]
 }

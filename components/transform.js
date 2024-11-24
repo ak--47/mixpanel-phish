@@ -15,7 +15,7 @@ import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 import { reloadDatabase, runSQL, listAllViews, writeFromTableToDisk } from "./duck.js";
 
-async function main(modelName = "") {
+export default async  function main(modelName = "") {
 	const reloadResults = await reloadDatabase();
 
 	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');

@@ -58,23 +58,6 @@ async function getCachedData(filename, fetchData) {
 	//we don't have the file... fetch + load to db
 	else {
 		const data = await fetchData();
-		// const flatData = data.map(FLATTEN);
-		// try {
-		// 	await touch(filename, data);
-		// }
-		// catch (e) {
-		// 	if (NODE_ENV === 'dev') debugger;
-		// }
-		// if (NODE_ENV === 'dev') console.log(`Wrote ${filename} to cache`);
-
-		// try {
-		// 	await loadJsonlToTable(`${TEMP_DIR}/${filename}`, filename.replace('.json', ''));
-		// 	if (NODE_ENV === 'dev') console.log(`Loaded ${filename} to DuckDB`);
-		// }
-		// catch (e) {
-		// 	if (NODE_ENV === 'dev') debugger;
-		// }
-
 		return data;
 	}
 }
@@ -105,7 +88,13 @@ export async function getUsers() {
 			...COMMON_OPT,
 			url: 'https://api.phish.net/v5/users/uid/0.json',
 			logFile: `${TEMP_DIR}/${filename}`,
-			responseHandler: nestedData
+			responseHandler: nestedData,
+			// hook: (result) => {
+			// 	if (date) {
+			// 		result = result.filter(u => dayjs(u.date_joined).isAfter(dayjs(date))); 
+			// 	}
+
+			// }
 		};
 
 		const users = await fetch([getUserOptions]);
@@ -342,23 +331,24 @@ export async function getReviews() {
 	});
 }
 
-export async function main() {
-	if (NODE_ENV === 'dev') console.log("\nGetting users...");
-	const users = await getUsers();
-	if (NODE_ENV === 'dev') console.log("Getting shows...");
-	const shows = await getShows();
-	if (NODE_ENV === 'dev') console.log("Getting venues...");
-	const venues = await getVenues();
-	if (NODE_ENV === 'dev') console.log("Getting jam notes...");
-	const notes = await getJamNotes();
-	if (NODE_ENV === 'dev') console.log("Getting songs...");
-	const songs = await getSongs();
+export default async function main(date = "") {
+	if (date) date = dayjs.utc(date).format('YYYY-MM-DD');
+	if (NODE_ENV === 'dev') console.log("\nGetting users, shows, venues, jam notes, and songs...");
+	const [users, shows, venues, notes, songs] = await Promise.all([
+		getUsers(date),
+		getShows(date),
+		getVenues(date),
+		getJamNotes(date),
+		getSongs(date)
+
+	]);
+
 	if (NODE_ENV === 'dev') console.log("Getting performances, metadata, reviews, and attendance...");
 	const [performances, metadata, review, attendance] = await Promise.all([
-		getPerformances(),
-		getMetaData(),
-		getReviews(),
-		getAttendance(),
+		getPerformances(date),
+		getMetaData(date),
+		getReviews(date),
+		getAttendance(date),
 	]);
 
 	if (NODE_ENV === 'dev') console.log("Done fetching data\n");
@@ -392,6 +382,9 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	let result;
 	try {
 		result = await main();
+		// await rm('./tmp/users.json');
+		// await getUsers('2021-01-01');
+
 	}
 	catch (e) {
 		if (NODE_ENV === 'dev') debugger;

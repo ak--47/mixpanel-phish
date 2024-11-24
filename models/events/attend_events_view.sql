@@ -7,6 +7,7 @@ WITH
 			a.uid as distinct_id,
 			a.showdate as time,
 			hash('attended show', a.uid, a.showdate) AS insert_id,
+			
 			-- additional joins
 			a.showid as show_id,
 			a.venueid as venue_id,
@@ -39,4 +40,4 @@ SELECT
 FROM
 	attend_events_view
 LIMIT
-	100;
+	10;
