@@ -26,8 +26,10 @@ const importCreds = {
 };
 
 
-export default async function main(directory = "output") {
-		
+export default async function main(
+	directory = "output", sendEvents = true, sendProfiles = true, sendAnnotations = true
+) {
+
 	const fileSystem = (await ls(path.resolve(TEMP_DIR, directory)))
 		.filter((dir) => isDirOrFile(dir) === 'directory')
 		.map((dir) => details(dir))
@@ -38,9 +40,18 @@ export default async function main(directory = "output") {
 		});
 
 
-	const results = {fileSystem};
-	const profileDeletes = await deleteProfiles();
-	results.profileDeletes = profileDeletes;
+	const results = { fileSystem };
+	if (sendProfile) {
+		try {
+			const profileDeletes = await deleteProfiles();
+			results.profileDeletes = profileDeletes;
+		}
+		catch (e) {
+			if (NODE_ENV === 'dev') debugger;
+			console.error('Error deleting profiles', e);
+			results.profileDeletes = e;
+		}
+	}
 
 
 	//we iterate over the directories, and load the data into mixpanel
@@ -61,70 +72,84 @@ export default async function main(directory = "output") {
 
 				// $latitude and $longitude are required, but SQL can't have $ in column names
 				// https://docs.mixpanel.com/docs/tracking-best-practices/geolocation#define-latitude-and-longitude
-				if (record.properties) {
-					if (record.properties.latitude) {
-						record.properties.$latitude = record.properties.latitude;
-						delete record.properties.latitude;
-					}
-					if (record.properties.longitude) {
-						record.properties.$longitude = record.properties.longitude;
-						delete record.properties.longitude;
-					}
+				if (record.latitude) {
+					record.$latitude = record.latitude;
+					delete record.latitude;
+				}
+				if (record.longitude) {
+					record.$longitude = record.longitude;
+					delete record.longitude;
 				}
 				return record;
 			}
 
 		};
 
-		/** @type {mp.Options} */
-		let modelOpts = {};
+	};
 
-		switch (model) {
-			case "attend_events_view":
-				modelOpts.epochStart = 946702800; // 2000-01-01
-				break;
+	/** @type {mp.Options} */
+	let modelOpts = {};
 
-			case "heardsong_events_view":
-				modelOpts.epochStart = 946702800; // 2000-01-01
-				break;
+	switch (model) {
+		case "attend_events_view":
+			modelOpts.epochStart = 946702800; // 2000-01-01
+			break;
 
-			case "review_events_view":
-				modelOpts.epochStart = 946702800; // 2000-01-01
-				break;
+		case "heardsong_events_view":
+			modelOpts.epochStart = 946702800; // 2000-01-01
+			break;
 
-			case "user_profiles_view":
-				modelOpts.recordType = "user";
-				break;
+		case "review_events_view":
+			modelOpts.epochStart = 946702800; // 2000-01-01
+			break;
 
-			case "performance_profiles_view":
-				modelOpts.recordType = "group";
-				modelOpts.groupKey = "performance_id";
-				break;
+		case "user_profiles_view":
+			modelOpts.recordType = "user";
+			break;
 
-			case "show_profiles_view":
-				modelOpts.recordType = "group";
-				modelOpts.groupKey = "show_id";
-				break;
+		case "performance_profiles_view":
+			modelOpts.recordType = "group";
+			modelOpts.groupKey = "performance_id";
+			break;
 
-			case "venue_profiles_view":
-				modelOpts.recordType = "group";
-				modelOpts.groupKey = "venue_id";
-				break;
+		case "show_profiles_view":
+			modelOpts.recordType = "group";
+			modelOpts.groupKey = "show_id";
+			break;
 
-			default:
-				throw new Error(`Model ${model} not recognized`);
-				break;
-		}
+		case "venue_profiles_view":
+			modelOpts.recordType = "group";
+			modelOpts.groupKey = "venue_id";
+			break;
 
-		const options = { ...commonOpts, ...modelOpts };
-		const target = dir.path;
-		if (NODE_ENV === 'dev') console.log(`\nImporting ${model} into Mixpanel\n`);
-		const importResults = await mp(importCreds, target, options);
-		if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
-		results[model] = importResults;
+		default:
+			throw new Error(`Model ${model} not recognized`);
+			break;
 	}
-	const loadedAnnotations = await loadChartAnnotations();
-	results.annotations = loadedAnnotations?.dryRun || [];
+
+	const options = { ...commonOpts, ...modelOpts };
+	const target = dir.path;
+	const { recordType } = options;
+	let importResults;
+	if (
+		(sendProfiles && (recordType === 'user' || recordType === 'group'))
+		|| (sendEvents && recordType === 'event')) {
+
+		if (NODE_ENV === 'dev') console.log(`\nImporting ${model} into Mixpanel\n`);
+		importResults = await mp(importCreds, target, options);
+		if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
+
+	}
+	else {
+		if (NODE_ENV === 'dev') console.log(`\nSkipping ${model} into Mixpanel\n`);
+		importResults = { skipped: true };
+	}
+	results[model] = importResults;
+
+	if (sendAnnotations) {
+		const loadedAnnotations = await loadChartAnnotations();
+		results.annotations = loadedAnnotations?.dryRun || [];
+	}
 	await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
 	return results;
 }
