@@ -41,7 +41,7 @@ export default async function main(
 
 
 	const results = { fileSystem };
-	if (sendProfile) {
+	if (sendProfiles) {
 		try {
 			const profileDeletes = await deleteProfiles();
 			results.profileDeletes = profileDeletes;
@@ -85,70 +85,77 @@ export default async function main(
 
 		};
 
-	};
 
-	/** @type {mp.Options} */
-	let modelOpts = {};
 
-	switch (model) {
-		case "attend_events_view":
-			modelOpts.epochStart = 946702800; // 2000-01-01
-			break;
+		/** @type {mp.Options} */
+		let modelOpts = {};
 
-		case "heardsong_events_view":
-			modelOpts.epochStart = 946702800; // 2000-01-01
-			break;
+		switch (model) {
+			case "attend_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
+				break;
 
-		case "review_events_view":
-			modelOpts.epochStart = 946702800; // 2000-01-01
-			break;
+			case "heardsong_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
+				break;
 
-		case "user_profiles_view":
-			modelOpts.recordType = "user";
-			break;
+			case "review_events_view":
+				modelOpts.epochStart = 946702800; // 2000-01-01
+				break;
 
-		case "performance_profiles_view":
-			modelOpts.recordType = "group";
-			modelOpts.groupKey = "performance_id";
-			break;
+			case "user_profiles_view":
+				modelOpts.recordType = "user";
+				break;
 
-		case "show_profiles_view":
-			modelOpts.recordType = "group";
-			modelOpts.groupKey = "show_id";
-			break;
+			case "performance_profiles_view":
+				modelOpts.recordType = "group";
+				modelOpts.groupKey = "performance_id";
+				break;
 
-		case "venue_profiles_view":
-			modelOpts.recordType = "group";
-			modelOpts.groupKey = "venue_id";
-			break;
+			case "show_profiles_view":
+				modelOpts.recordType = "group";
+				modelOpts.groupKey = "show_id";
+				break;
+			
+			case "song_profiles_view":
+				modelOpts.recordType = "group";
+				modelOpts.groupKey = "song_id";
+				break;
 
-		default:
-			throw new Error(`Model ${model} not recognized`);
-			break;
-	}
+			// case "venue_profiles_view":
+			// 	modelOpts.recordType = "group";
+			// 	modelOpts.groupKey = "venue_id";
+			// 	break;
 
-	const options = { ...commonOpts, ...modelOpts };
-	const target = dir.path;
-	const { recordType } = options;
-	let importResults;
-	if (
-		(sendProfiles && (recordType === 'user' || recordType === 'group'))
-		|| (sendEvents && recordType === 'event')) {
+			default:
+				console.log(`Model ${model} not recognized; skipping`);
+				continue loopModels;
+				
+		}
 
-		if (NODE_ENV === 'dev') console.log(`\nImporting ${model} into Mixpanel\n`);
-		importResults = await mp(importCreds, target, options);
-		if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
+		const options = { ...commonOpts, ...modelOpts };
+		const target = dir.path;
+		const { recordType } = options;
+		let importResults;
+		if (
+			(sendProfiles && (recordType === 'user' || recordType === 'group'))
+			|| (sendEvents && recordType === 'event')) {
 
-	}
-	else {
-		if (NODE_ENV === 'dev') console.log(`\nSkipping ${model} into Mixpanel\n`);
-		importResults = { skipped: true };
-	}
-	results[model] = importResults;
+			if (NODE_ENV === 'dev') console.log(`\nImporting ${model} into Mixpanel\n`);
+			importResults = await mp(importCreds, target, options);
+			if (NODE_ENV === 'dev') console.log(`\nImported ${model} into Mixpanel\n`);
 
-	if (sendAnnotations) {
-		const loadedAnnotations = await loadChartAnnotations();
-		results.annotations = loadedAnnotations?.dryRun || [];
+		}
+		else {
+			if (NODE_ENV === 'dev') console.log(`\nSkipping ${model} into Mixpanel\n`);
+			importResults = { skipped: true };
+		}
+		results[model] = importResults;
+
+		if (sendAnnotations) {
+			const loadedAnnotations = await loadChartAnnotations();
+			results.annotations = loadedAnnotations?.dryRun || [];
+		}	
 	}
 	await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
 	return results;
