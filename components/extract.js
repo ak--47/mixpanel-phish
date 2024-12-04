@@ -400,7 +400,7 @@ export default async function main(date = "", errorHandler = (e) => { }) {
 	if (date) date = dayjs.utc(date).format('YYYY-MM-DD');
 	if (!date) date = dayjs.utc().subtract(7, 'd').format('YYYY-MM-DD');
 
-	let users, shows, venues, notes, songs, performances, metadata, review, attendance;
+	let users, shows, venues, notes, songs, performances, metadata, reviews, attendance;
 
 	if (NODE_ENV === 'dev') console.log("\nGetting users, shows, venues, jam notes, and songs...");
 	try {
@@ -421,7 +421,7 @@ export default async function main(date = "", errorHandler = (e) => { }) {
 
 	if (NODE_ENV === 'dev') console.log("Getting performances, metadata, reviews, and attendance...");
 	try {
-		([performances, metadata, review, attendance] = await Promise.all([
+		([performances, metadata, reviews, attendance] = await Promise.all([
 			getPerformances(date),
 			getMetaData(date),
 			getReviews(date),
@@ -435,8 +435,19 @@ export default async function main(date = "", errorHandler = (e) => { }) {
 	}
 
 	if (NODE_ENV === 'dev') console.log("Done fetching data\n");
+	return {
+		users: users.length,
+		shows: shows.length,
+		venues: venues.length,
+		notes: notes.length,
+		songs: songs.length,
+		performances: performances.length,
+		metadata: metadata.length,
+		reviews: reviews.length,
+		attendance: attendance.length
 
-	return { users, shows, venues, notes, songs, performances, metadata, review, attendance };
+	}
+	
 
 }
 

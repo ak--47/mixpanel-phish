@@ -66,4 +66,4 @@ FROM
 WHERE
 	jam_notes not null
 LIMIT
-	100;
+	10;

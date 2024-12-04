@@ -11,3 +11,7 @@ logs/*
 .env
 .envBACKUP
 scratch.js
+service-account.json
+credentials.json
+env.yaml
+env.yaml

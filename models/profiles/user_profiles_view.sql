@@ -14,4 +14,4 @@ WITH
 	)
 SELECT * FROM TEMP;
 
-SELECT * FROM user_profiles_view LIMIT 100;
+SELECT * FROM user_profiles_view LIMIT 10;

@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { tmpdir } from 'os';
 dotenv.config();
 const { NODE_ENV = "" } = process.env;
 if (!NODE_ENV) throw new Error("NODE_ENV is required");
@@ -15,7 +16,7 @@ import utc from 'dayjs/plugin/utc.js';
 dayjs.extend(utc);
 import { reloadDatabase, runSQL, listAllViews, writeFromTableToDisk } from "./duck.js";
 
-export default async  function main(modelName = "") {
+export default async function main(modelName = "") {
 	const reloadResults = await reloadDatabase();
 
 	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
@@ -52,9 +53,19 @@ export default async  function main(modelName = "") {
 	}
 	if (NODE_ENV === 'dev') console.log('\n----------------------------------\n');
 
+	//summarize operations
+	const viewsSummary = [];
+	for (const result of viewResults) {
+		const summary = { ...result };
+		const model = modelResults.find(m => m.modelName?.startsWith(result.table_name));
+		if (model) {
+			summary.modelName = model.modelName;
+			summary.sample = model.result;
+		}
+		viewsSummary.push(summary);
+	}
 
-
-	return { reloadResults, modelResults, viewResults };
+	return { raw: reloadResults, views: viewsSummary };
 }
 
 

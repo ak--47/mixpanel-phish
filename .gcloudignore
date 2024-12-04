@@ -5,13 +5,22 @@ fire.sh
 sample-event.json
 scratch.js
 .vscode
+.env
+scripts
+tests
+.prettierrc
+Dockerfile
+docker-compose.yml
+README.md
+service-account.json
+credentials.json
 
 
 
 # Ignore node_modules (generated during npm install)
 node_modules
 # Ignore local environment configuration
-.env
+
 # Ignore specific directories
 data
 tmp

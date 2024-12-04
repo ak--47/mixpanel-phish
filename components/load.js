@@ -26,10 +26,9 @@ const importCreds = {
 };
 
 
-export default async function main(
-	directory = "output", sendEvents = true, sendProfiles = true, sendAnnotations = true
-) {
-
+export default async function main( opts = { sendEvents: true, sendProfiles: true, sendAnnotations: false }) {
+	const directory = "output"; // TEMP_DIR + '/output';
+	const { sendEvents = true, sendProfiles = true, sendAnnotations = false } = opts;
 	const fileSystem = (await ls(path.resolve(TEMP_DIR, directory)))
 		.filter((dir) => isDirOrFile(dir) === 'directory')
 		.map((dir) => details(dir))
@@ -39,11 +38,13 @@ export default async function main(
 			return dir;
 		});
 
-
+	
 	const results = { fileSystem };
 	if (sendProfiles) {
 		try {
+			if (NODE_ENV === 'dev') console.log(`\nDeleting profiles from Mixpanel\n`);
 			const profileDeletes = await deleteProfiles();
+			if (NODE_ENV === 'dev') console.log(`\nDeleted profiles from Mixpanel\n`);
 			results.profileDeletes = profileDeletes;
 		}
 		catch (e) {
@@ -57,12 +58,13 @@ export default async function main(
 	//we iterate over the directories, and load the data into mixpanel
 	loopModels: for (const dir of fileSystem) {
 		const { model } = dir;
+		if (NODE_ENV === 'dev') console.log(`\nSTART ${model}\n`);
 		/** @type {mp.Options} */
 		const commonOpts = {
 			recordType: "event",
 			streamFormat: "parquet",
 			verbose: false,
-			showProgress: true,
+			showProgress: NODE_ENV === 'dev',
 			removeNulls: true,
 			abridged: true,
 			strict: true,
@@ -89,7 +91,6 @@ export default async function main(
 
 		/** @type {mp.Options} */
 		let modelOpts = {};
-
 		switch (model) {
 			case "attend_events_view":
 				modelOpts.epochStart = 946702800; // 2000-01-01
@@ -116,7 +117,7 @@ export default async function main(
 				modelOpts.recordType = "group";
 				modelOpts.groupKey = "show_id";
 				break;
-			
+
 			case "song_profiles_view":
 				modelOpts.recordType = "group";
 				modelOpts.groupKey = "song_id";
@@ -130,7 +131,7 @@ export default async function main(
 			default:
 				console.log(`Model ${model} not recognized; skipping`);
 				continue loopModels;
-				
+
 		}
 
 		const options = { ...commonOpts, ...modelOpts };
@@ -151,13 +152,18 @@ export default async function main(
 			importResults = { skipped: true };
 		}
 		results[model] = importResults;
+		if (NODE_ENV === 'dev') console.log(`\nFINISH ${model}\n`);
 
-		if (sendAnnotations) {
-			const loadedAnnotations = await loadChartAnnotations();
-			results.annotations = loadedAnnotations?.dryRun || [];
-		}	
 	}
-	await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
+
+
+	if (sendAnnotations) {
+		if (NODE_ENV === 'dev') console.log(`\nLoading annotations into Mixpanel\n`);
+		const loadedAnnotations = await loadChartAnnotations();
+		results.annotations = loadedAnnotations?.dryRun || [];
+		if (NODE_ENV === 'dev') console.log(`\nLoaded annotations into Mixpanel\n`);
+	}
+	// await touch(path.resolve(TEMP_DIR, '/output/results.json'), results, true, false, false);
 	return results;
 }
 
@@ -171,7 +177,7 @@ async function deleteProfiles() {
 	const commonOpts = {
 		recordType: "profile-delete",
 		verbose: false,
-		showProgress: true
+		showProgress: NODE_ENV === 'dev',
 	};
 
 	const users = await mp(importCreds, null, { ...commonOpts });
@@ -190,7 +196,7 @@ async function loadChartAnnotations() {
 	const options = {
 		recordType: "annotations",
 		verbose: false,
-		showProgress: true
+		showProgress: NODE_ENV === 'dev',
 	};
 	const deleted = await mp(importCreds, null, { ...options, recordType: "delete-annotations" });
 	const importedAnnotations = await mp(importCreds, annotations, options);

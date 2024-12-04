@@ -16,4 +16,4 @@ WITH
 	)
 SELECT * FROM TEMP;
 
-SELECT * FROM song_profiles_view LIMIT 100;
+SELECT * FROM song_profiles_view LIMIT 10;

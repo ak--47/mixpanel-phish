@@ -4,19 +4,14 @@
 	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
+
 		{
-			"name": "SQL",
-			"type": "node",
+			"type": "bashdb",
 			"request": "launch",
-			"runtimeExecutable": "duckdb",
-			"args": [
-				"./tmp/duckdb.db",
-				"-init",
-				"${file}"
-			],
+			"name": "bash",
 			"cwd": "${workspaceFolder}",
-			"console": "integratedTerminal",
-			"internalConsoleOptions": "neverOpen"
+			"program": "${file}",
+			"args": []
 		},
 		{
 			"type": "node",
@@ -35,6 +30,23 @@
 				"NODE_ENV": "dev"
 			}
 		},
+
+
+		{
+			"name": "SQL",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "duckdb",
+			"args": [
+				"./tmp/duckdb.db",
+				"-init",
+				"${file}"
+			],
+			"cwd": "${workspaceFolder}",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
+		
 		{
 			"type": "node",
 			"request": "launch",
@@ -46,10 +58,7 @@
 			],
 			"restart": true,
 			"console": "integratedTerminal",
-			"internalConsoleOptions": "neverOpen",
-			"env": {
-				"NODE_ENV": "dev"
-			}
+			"internalConsoleOptions": "neverOpen"			
 		},
 		{
 			"command": "npm run fire",
