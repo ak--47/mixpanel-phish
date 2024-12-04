@@ -18,7 +18,7 @@ import utc from 'dayjs/plugin/utc.js';
 import { existsSync } from "fs";
 import { loadNDJSON, loadCSV } from './crud.js';
 import { loadJsonlToTable, resetDatabase, getSchema } from "./duck.js";
-import { rm, ls } from 'ak-tools';
+import { rm, ls, sleep } from 'ak-tools';
 dayjs.extend(utc);
 
 const CONCURRENCY = 30;
@@ -477,7 +477,8 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	try {
 
 		const args = process.argv.slice(2);
-
+		console.log(args)
+		await sleep(10_000_000)
 		if (args[1] === 'full') {
 			console.log('\nRUNNING FULL BACKFILL!\n');
 			result = await main('1980-01-01');

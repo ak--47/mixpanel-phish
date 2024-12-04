@@ -1,5 +1,5 @@
 #!/bin/bash
-
+rm -rf ./tmp/*
 export NODE_OPTIONS="--max-old-space-size=32768"
 export NODE_ENV="dev"
 # Set script to exit on any error
@@ -15,13 +15,13 @@ NC='\033[0m' # No Color
 run_script() {
     local script=$1
 	shift
-	local args="$@"
+
     
-    echo -e "\n${BLUE}Starting $script with $args ...${NC}"
+    echo -e "\n${BLUE}Starting $script with ...${NC}"
     # shellcheck disable=SC2155
     local start_time=$(date +%s)
     
-    node "$script" $args
+    node "$script" "$@"
     
     # shellcheck disable=SC2155
     local end_time=$(date +%s)
