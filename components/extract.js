@@ -477,9 +477,7 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	try {
 
 		const args = process.argv.slice(2);
-		console.log(args)
-		await sleep(10_000_000)
-		if (args[1] === 'full') {
+		if (args[0] === 'full') {
 			console.log('\nRUNNING FULL BACKFILL!\n');
 			result = await main('1980-01-01');
 			
