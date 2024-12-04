@@ -446,8 +446,8 @@ export default async function main(date = "", errorHandler = (e) => { }) {
 		reviews: reviews.length,
 		attendance: attendance.length
 
-	}
-	
+	};
+
 
 }
 
@@ -475,7 +475,19 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	// }
 	let result;
 	try {
-		result = await main();
+
+		const args = process.argv.slice(2);
+
+		if (args[1] === 'full') {
+			console.log('\nRUNNING FULL BACKFILL!\n');
+			result = await main('1980-01-01');
+			
+		} else {
+			result = await main();
+			
+		
+		}
+		
 		// await rm('./tmp/users.json');
 		// await getUsers('2021-01-01');
 

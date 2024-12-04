@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# export NODE_OPTIONS="--max-old-space-size=4096"
-# export NODE_OPTIONS="--max-old-space-size=8192"
-# export NODE_OPTIONS="--max-old-space-size=16384"
 export NODE_OPTIONS="--max-old-space-size=32768"
-
+export NODE_ENV="dev"
 # Set script to exit on any error
 set -e
 
@@ -34,7 +31,7 @@ echo -e "\n${BLUE}Starting ETL pipeline...${NC}\n"
 total_start_time=$(date +%s)
 
 # Extract
-run_script "./components/extract.js"
+run_script "./components/extract.js full"
 
 # Transform
 run_script "./components/transform.js"
