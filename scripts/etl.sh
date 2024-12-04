@@ -44,3 +44,6 @@ total_duration=$((total_end_time - total_start_time))
 
 echo -e "\n${GREEN}ETL pipeline completed successfully${NC}\n"
 echo -e "\n${GREEN}Total duration: $total_duration seconds${NC}\n"
+
+rm -rf ./tmp/*
+ 
