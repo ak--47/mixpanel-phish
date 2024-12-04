@@ -14,12 +14,14 @@ NC='\033[0m' # No Color
 # Function to run and time a script
 run_script() {
     local script=$1
+	shift
+	local args="$@"
     
-    echo -e "\n${BLUE}Starting $script...${NC}"
+    echo -e "\n${BLUE}Starting $script with $args ...${NC}"
     # shellcheck disable=SC2155
     local start_time=$(date +%s)
     
-    node "$script"
+    node "$script" $args
     
     # shellcheck disable=SC2155
     local end_time=$(date +%s)
@@ -31,7 +33,7 @@ echo -e "\n${BLUE}Starting ETL pipeline...${NC}\n"
 total_start_time=$(date +%s)
 
 # Extract
-run_script "./components/extract.js full"
+run_script "./components/extract.js" "full"
 
 # Transform
 run_script "./components/transform.js"
