@@ -71,7 +71,6 @@ export async function loadCSV(filename, limit = 10000) {
 	})
 }
 
-
 export async function loadNDJSON(filename, limit = 10000) {
 	const filePath = path.join(TEMP_DIR, filename);
 	const readStream = createReadStream(filePath, { highWaterMark: 64 * 1024 * 2 * 2 });

@@ -26,7 +26,7 @@ const importCreds = {
 };
 
 
-export default async function main( opts = { sendEvents: true, sendProfiles: true, sendAnnotations: false }) {
+export default async function main(opts = { sendEvents: true, sendProfiles: true, sendAnnotations: false }) {
 	const directory = "output"; // TEMP_DIR + '/output';
 	const { sendEvents = true, sendProfiles = true, sendAnnotations = false } = opts;
 	const fileSystem = (await ls(path.resolve(TEMP_DIR, directory)))
@@ -38,7 +38,7 @@ export default async function main( opts = { sendEvents: true, sendProfiles: tru
 			return dir;
 		});
 
-	
+
 	const results = { fileSystem };
 	if (sendProfiles) {
 		try {
@@ -212,7 +212,7 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	// }
 	let result;
 	try {
-		result = await main();
+		result = await main({ sendEvents: false, sendProfiles: true });
 		// result = await deleteProfiles();
 		// result = await loadChartAnnotations();
 	}

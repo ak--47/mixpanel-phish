@@ -17,7 +17,6 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { existsSync } from "fs";
 import { loadNDJSON, loadCSV } from './crud.js';
-import { loadJsonlToTable, resetDatabase, getSchema } from "./duck.js";
 import { rm, ls, sleep, load } from 'ak-tools';
 dayjs.extend(utc);
 

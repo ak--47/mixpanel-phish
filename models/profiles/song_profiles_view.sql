@@ -10,7 +10,8 @@ WITH
 		
 		s.debut as debut,
 		s.times_played as times_played,
-		s.last_played as last_played        
+		s.last_played as last_played,
+		s.song as song_name
     FROM
        songs as s
 	)

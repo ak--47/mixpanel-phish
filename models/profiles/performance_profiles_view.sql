@@ -18,7 +18,7 @@ WITH
 			m.date AS show_date,
 			COALESCE(m.tour_name, p.tourname) AS tour_name,
 			track.slug AS track_slug,
-			track.title AS track_title,
+			track.title AS song_name,
 			track.position AS track_position,
 			ROUND(track.duration / 60000, 2) AS duration_mins,
 			track.set_name AS set_name,

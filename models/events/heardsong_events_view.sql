@@ -9,7 +9,8 @@ WITH unnested_tracks AS (
         track.duration AS duration,
         track.mp3_url AS url,
         track.position AS track_position,
-		track.set_name AS set_name		
+		track.set_name AS set_name,
+				
     FROM
         metadata as m,
         UNNEST(m.tracks) AS tracks(track)

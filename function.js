@@ -21,11 +21,10 @@ TEMP_DIR = path.resolve(TEMP_DIR);
 
 /**
  * @typedef {Object} Params
- * @property {string} [foo] - Description of foo
- * @property {number} [bar] - Description of bar
+ * @property {string} [date] - start date for processing
  */
 
-/** @typedef {'/' | '/foo'} Endpoints  */
+/** @typedef {'/'} Endpoints  */
 
 // ? https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/BigInt_not_serializable
 BigInt.prototype.toJSON = function () {
@@ -108,10 +107,6 @@ async function main(data) {
 
 }
 
-async function ping() {
-	return Promise.resolve({ status: "ok", message: "pong" });
-}
-
 
 /*
 ----
@@ -127,8 +122,6 @@ function route(path) {
 	switch (path) {
 		case "/":
 			return [main];
-		case "/ping":
-			return [() => { }];
 		default:
 			return [main];
 	}
