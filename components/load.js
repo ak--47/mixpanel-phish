@@ -213,7 +213,7 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 	let result;
 	try {
 		result = await main({ sendEvents: true, sendProfiles: true, deleteStuff: true });
-		await touch('RESULTS.json', result, true)
+		await touch(path.resolve(TEMP_DIR, "RESULTS.JSON"), result, true)
 		// result = await deleteProfiles();
 		// result = await loadChartAnnotations();
 	}
