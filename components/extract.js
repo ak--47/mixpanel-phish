@@ -505,7 +505,8 @@ if (import.meta.url === new URL(`file://${process.argv[1]}`).href) {
 			result = await main('1980-01-01');
 
 		} else {
-			result = await main('2024-01-01');
+			// result = await main('2024-01-01');
+			result = await main('1980-01-01');
 
 
 		}
